@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS tracks (
     -- We store the binary album art directly in the DB for instant retrieval
     cover_art BLOB,
     cover_art_mime TEXT,
+    has_lyrics INTEGER DEFAULT 0,
+    is_instrumental INTEGER DEFAULT 0,
+    lyrics_json TEXT,
     date_added INTEGER DEFAULT (strftime('%s', 'now')),
     date_modified INTEGER DEFAULT (strftime('%s', 'now'))
 );
@@ -23,6 +26,7 @@ CREATE TABLE IF NOT EXISTS tracks (
 CREATE INDEX IF NOT EXISTS idx_artist ON tracks(artist_name);
 CREATE INDEX IF NOT EXISTS idx_album  ON tracks(album_name);
 CREATE INDEX IF NOT EXISTS idx_genre  ON tracks(genre);
+CREATE INDEX IF NOT EXISTS idx_has_lyrics ON tracks(has_lyrics);
 
 -- FTS5 (Full-Text Search) allows the user to type "Dua Lipa" and instantly
 -- find every track, album, and artist matching that string without lag.

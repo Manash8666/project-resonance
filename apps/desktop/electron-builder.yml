@@ -1,0 +1,33 @@
+appId: com.resonance.desktop
+productName: "Project Resonance"
+
+directories:
+  buildResources: "build"
+  output: "release"
+
+files:
+  - "dist/**/*"
+  - "package.json"
+
+asarUnpack:
+  - "**/node_modules/ffmpeg-static/**"
+  - "**/node_modules/@huggingface/transformers/**"
+  - "**/node_modules/onnxruntime-node/**"
+  - "**/node_modules/better-sqlite3/**"
+
+win:
+  target:
+    - target: portable
+      arch:
+        - x64
+    - target: nsis
+      arch:
+        - x64
+
+portable:
+  artifactName: "Project-Resonance-Portable-${version}.exe"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: "Project-Resonance-Setup-${version}.exe"

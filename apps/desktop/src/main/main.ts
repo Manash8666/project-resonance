@@ -182,6 +182,15 @@ function registerHandlers(): void {
     if (!aiEngine) aiEngine = new TranscriptionEngine();
     return await aiEngine.transcribe(filePath);
   });
+
+  ipcMain.handle('library:saveLyrics', async (_event, trackId: number, words: any, isInstrumental = false) => {
+    library.saveTranscription(trackId, words, isInstrumental);
+    return true;
+  });
+
+  ipcMain.handle('library:getLyrics', async (_event, trackId: number) => {
+    return library.getLyricsForTrack(trackId);
+  });
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────

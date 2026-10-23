@@ -24,8 +24,17 @@ export interface Track {
   duration_ms: number | null;
   cover_art: Buffer | null;
   cover_art_mime: string | null;
+  has_lyrics: number;
+  is_instrumental: number;
+  lyrics_json: string | null;
   date_added: number;
   date_modified: number;
+}
+
+export interface WordTimestamp {
+  word: string;
+  start: number;
+  end: number;
 }
 
 export interface ScanProgress {
@@ -70,6 +79,19 @@ export class LibraryEngine {
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf-8');
     this.db.exec(schema);
+
+    // Safe non-destructive column migrations for existing databases
+    const columns = (this.db.pragma('table_info(tracks)') as Array<{ name: string }>).map((c) => c.name);
+    if (!columns.includes('has_lyrics')) {
+      this.db.exec('ALTER TABLE tracks ADD COLUMN has_lyrics INTEGER DEFAULT 0;');
+    }
+    if (!columns.includes('is_instrumental')) {
+      this.db.exec('ALTER TABLE tracks ADD COLUMN is_instrumental INTEGER DEFAULT 0;');
+    }
+    if (!columns.includes('lyrics_json')) {
+      this.db.exec('ALTER TABLE tracks ADD COLUMN lyrics_json TEXT;');
+    }
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_has_lyrics ON tracks(has_lyrics);');
   }
 
   // ── Directory Scanner ──────────────────────────────────────────────────────
@@ -179,6 +201,7 @@ export class LibraryEngine {
       .prepare(
         `SELECT id, file_path, file_name, title, artist_name, album_name,
                 genre, year, track_number, duration_ms, cover_art_mime,
+                has_lyrics, is_instrumental,
                 date_added, date_modified
          FROM tracks
          ORDER BY ${col} ${dir}
@@ -201,7 +224,8 @@ export class LibraryEngine {
       .prepare(
         `SELECT t.id, t.file_path, t.file_name, t.title, t.artist_name,
                 t.album_name, t.genre, t.year, t.track_number, t.duration_ms,
-                t.cover_art_mime, t.date_added, t.date_modified
+                t.cover_art_mime, t.has_lyrics, t.is_instrumental,
+                t.date_added, t.date_modified
          FROM tracks_fts
          JOIN tracks t ON tracks_fts.rowid = t.id
          WHERE tracks_fts MATCH ?
@@ -245,6 +269,39 @@ export class LibraryEngine {
                 WHERE artist_name = ?`)
       .run(newName, oldName);
     return info.changes;
+  }
+
+  // ── Lyrics & Vocal Telemetry ───────────────────────────────────────────────
+
+  /** Save the AI-transcribed word-level timestamps directly to SQLite. */
+  saveTranscription(trackId: number, words: WordTimestamp[], isInstrumental = false): void {
+    const stmt = this.db.prepare(`
+      UPDATE tracks 
+      SET has_lyrics = 1, 
+          is_instrumental = ?, 
+          lyrics_json = ?,
+          date_modified = strftime('%s', 'now')
+      WHERE id = ?
+    `);
+    const jsonPayload = JSON.stringify(words);
+    stmt.run(isInstrumental ? 1 : 0, jsonPayload, trackId);
+  }
+
+  /** Retrieve the parsed WordTimestamp array for the visualizer. */
+  getLyricsForTrack(trackId: number): WordTimestamp[] | null {
+    const row = this.db.prepare('SELECT has_lyrics, lyrics_json FROM tracks WHERE id = ?').get(trackId) as
+      | { has_lyrics: number; lyrics_json: string | null }
+      | undefined;
+
+    if (!row || row.has_lyrics === 0 || !row.lyrics_json) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(row.lyrics_json) as WordTimestamp[];
+    } catch {
+      return null;
+    }
   }
 
   // ── Internals ──────────────────────────────────────────────────────────────

@@ -12,7 +12,9 @@
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json",
     "build": "pnpm build:renderer && pnpm build:main",
-    "package": "pnpm build && electron-builder"
+    "package": "pnpm build && electron-builder",
+    "build:win": "pnpm build && electron-builder build --win --x64",
+    "build:portable": "pnpm build && electron-builder build --win portable"
   },
   "dependencies": {
     "@react-three/fiber": "^9.8.0",

@@ -1,7 +1,7 @@
 // apps/desktop/src/renderer/App.tsx
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { List } from 'react-window';
-import type { SortField, SortDir, ScanProgress, Track } from 'library-core';
+import type { SortField, SortDir, ScanProgress, Track, WordTimestamp } from 'library-core';
 import { ResonanceVisualizer, VisualizerScene, DynamicsMode } from 'visual-engine';
 import { ExportModal } from './components/ExportModal.js';
 
@@ -51,6 +51,24 @@ export default function App() {
 
   // Video Export Modal State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // AI Whisper Transcription & Lyrics Telemetry
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionStatus, setTranscriptionStatus] = useState<string | null>(null);
+  const [activeLyrics, setActiveLyrics] = useState<WordTimestamp[] | null>(null);
+
+  // Load lyrics whenever selected track changes
+  useEffect(() => {
+    if (!selectedTrack) {
+      setActiveLyrics(null);
+      return;
+    }
+    window.resonance.getLyrics(selectedTrack.id).then((lyrics) => {
+      setActiveLyrics(lyrics);
+    }).catch(() => {
+      setActiveLyrics(null);
+    });
+  }, [selectedTrack?.id]);
 
   // Window viewport measurement
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
@@ -245,6 +263,29 @@ export default function App() {
     }
   };
 
+  // Auto-transcribe track via local Whisper ONNX engine
+  const handleAutoTranscribe = async () => {
+    if (!selectedTrack) return;
+    setIsTranscribing(true);
+    setTranscriptionStatus('Engaging Whisper AI: Downmixing audio to 16kHz mono & calculating word timestamps...');
+    try {
+      const timestamps = await window.resonance.transcribeTrack(selectedTrack.file_path);
+      await window.resonance.saveLyrics(selectedTrack.id, timestamps, timestamps.length === 0);
+      setActiveLyrics(timestamps);
+      setSelectedTrack((prev) => (prev ? { ...prev, has_lyrics: timestamps.length > 0 ? 1 : 0 } : null));
+      setTracks((prev) =>
+        prev.map((t) => (t.id === selectedTrack.id ? { ...t, has_lyrics: timestamps.length > 0 ? 1 : 0 } : t))
+      );
+      setTranscriptionStatus(`✓ Vocal Telemetry Locked: ${timestamps.length} word timestamps saved.`);
+      setTimeout(() => setTranscriptionStatus(null), 3500);
+    } catch (err) {
+      console.error('Auto-transcribe failed:', err);
+      setTranscriptionStatus(`Transcription error: ${String(err)}`);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
   // Duration Formatter
   const formatTime = (msOrSec: number | null, isSec = false): string => {
     if (msOrSec == null || isNaN(msOrSec)) return '0:00';
@@ -328,9 +369,16 @@ export default function App() {
               className="w-full bg-[#1e2736] border border-[#00f0ff] px-2 py-0.5 rounded text-xs text-white focus:outline-none"
             />
           ) : (
-            <span className={isSelected ? 'text-[#00f0ff] font-semibold' : 'text-zinc-200'}>
-              {track.title || track.file_name}
-            </span>
+            <div className="flex items-center space-x-2 truncate">
+              <span className={isSelected ? 'text-[#00f0ff] font-semibold' : 'text-zinc-200'}>
+                {track.title || track.file_name}
+              </span>
+              {track.has_lyrics === 1 && (
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40">
+                  VOCAL
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -788,6 +836,51 @@ export default function App() {
                   >
                     <span>⚡ EXPORT 4K / 60FPS MASTER</span>
                   </button>
+
+                  <button
+                    onClick={handleAutoTranscribe}
+                    disabled={isTranscribing}
+                    className={`w-full py-2 border font-mono font-bold text-xs rounded transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center space-x-2 ${
+                      selectedTrack.has_lyrics
+                        ? 'bg-[#121f18] hover:bg-[#1a2d24] border-emerald-500/50 text-emerald-400'
+                        : 'bg-[#181326] hover:bg-[#251d3b] border-fuchsia-500/50 text-fuchsia-400 hover:text-white'
+                    }`}
+                  >
+                    <span>
+                      {isTranscribing
+                        ? '⚡ TRANSCRIBING VOCALS (WHISPER)...'
+                        : selectedTrack.has_lyrics
+                        ? '✓ VOCALS TRANSCRIBED (RE-RUN)'
+                        : '⚡ AUTO-TRANSCRIBE VOCALS'}
+                    </span>
+                  </button>
+
+                  {transcriptionStatus && (
+                    <div className="p-2 rounded bg-[#10141f] border border-[#00f0ff]/40 text-[11px] text-[#00f0ff] font-mono leading-tight animate-pulse">
+                      {transcriptionStatus}
+                    </div>
+                  )}
+
+                  {activeLyrics && activeLyrics.length > 0 && (
+                    <div className="p-2.5 rounded bg-[#0b0e14] border border-[#1e2638] space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-mono text-zinc-400">
+                        <span className="text-[#00f0ff] font-bold">VOCAL TELEMETRY</span>
+                        <span className="text-emerald-400 font-bold">{activeLyrics.length} WORDS</span>
+                      </div>
+                      <div className="max-h-24 overflow-y-auto text-[11px] font-mono text-zinc-300 space-x-1 leading-relaxed">
+                        {activeLyrics.slice(0, 35).map((w, idx) => (
+                          <span
+                            key={idx}
+                            className="hover:text-[#00f0ff] transition-colors"
+                            title={`${w.start.toFixed(2)}s - ${w.end.toFixed(2)}s`}
+                          >
+                            {w.word}
+                          </span>
+                        ))}
+                        {activeLyrics.length > 35 && <span className="text-zinc-600">...</span>}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Data Attributes */}
                   <div className="border-t border-[#1c222c] pt-3 space-y-2 font-mono text-xs">

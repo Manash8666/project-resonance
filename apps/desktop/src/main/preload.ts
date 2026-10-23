@@ -85,6 +85,12 @@ const resonanceAPI = {
 
   transcribeTrack: (filePath: string): Promise<WordTimestamp[]> =>
     ipcRenderer.invoke('ai:transcribe', filePath),
+
+  saveLyrics: (trackId: number, words: WordTimestamp[], isInstrumental = false): Promise<boolean> =>
+    ipcRenderer.invoke('library:saveLyrics', trackId, words, isInstrumental),
+
+  getLyrics: (trackId: number): Promise<WordTimestamp[] | null> =>
+    ipcRenderer.invoke('library:getLyrics', trackId),
 } as const;
 
 contextBridge.exposeInMainWorld('resonance', resonanceAPI);
