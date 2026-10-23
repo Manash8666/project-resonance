@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { LibraryEngine } from 'library-core';
 import type { SortField, SortDir } from 'library-core';
+import { VideoAssembler, RenderSettings } from './workers/videoAssembler.js';
 
 // Register media protocol privileges before app ready
 protocol.registerSchemesAsPrivileged([
@@ -107,6 +108,61 @@ function registerHandlers(): void {
     const art = library.getCoverArt(id);
     if (!art) return null;
     return `data:${art.mime};base64,${art.data.toString('base64')}`;
+  });
+
+  // Native Save File Dialog for MP4 video export
+  ipcMain.handle('dialog:selectSavePath', async (_e, defaultName?: string) => {
+    if (!mainWindow) return null;
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Select Export Destination',
+      defaultPath: defaultName || `Resonance_Export_${Date.now()}.mp4`,
+      filters: [{ name: 'MP4 Video', extensions: ['mp4'] }],
+    });
+    return canceled ? null : filePath;
+  });
+
+  // Start Offline Headless Render Pipeline with FFmpeg
+  ipcMain.handle('export:start', async (event, settings: RenderSettings) => {
+    const renderWindow = new BrowserWindow({
+      show: false,
+      width: settings.width,
+      height: settings.height,
+      webPreferences: {
+        offscreen: true,
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+
+    const assembler = new VideoAssembler();
+
+    const renderPromise = assembler.start(settings, (percent) => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('export:progress', percent);
+      }
+    });
+
+    // Capture each rendered frame directly from GPU memory
+    renderWindow.webContents.on('paint', (_e, _dirty, image) => {
+      const rawBuffer = image.toBitmap();
+      assembler.writeFrame(rawBuffer);
+    });
+
+    const renderUrl = isDev
+      ? `http://localhost:5173?mode=render&audio=${encodeURIComponent(settings.audioPath)}`
+      : `file://${path.join(__dirname, '../../renderer/index.html')}?mode=render&audio=${encodeURIComponent(settings.audioPath)}`;
+
+    await renderWindow.loadURL(renderUrl);
+
+    // Wait for renderer completion signal
+    ipcMain.once('export:complete', () => {
+      assembler.finish();
+      if (!renderWindow.isDestroyed()) renderWindow.close();
+    });
+
+    await renderPromise;
+    return settings.outputPath;
   });
 }
 

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { List } from 'react-window';
 import type { SortField, SortDir, ScanProgress, Track } from 'library-core';
 import { ResonanceVisualizer, VisualizerScene, DynamicsMode } from 'visual-engine';
+import { ExportModal } from './components/ExportModal.js';
 
 // Shape of track without cover art BLOB returned by IPC
 export type GridTrack = Omit<Track, 'cover_art'>;
@@ -47,6 +48,9 @@ export default function App() {
   const [oldArtistInput, setOldArtistInput] = useState('');
   const [newArtistInput, setNewArtistInput] = useState('');
   const [batchResultMsg, setBatchResultMsg] = useState<string | null>(null);
+
+  // Video Export Modal State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Window viewport measurement
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
@@ -517,6 +521,19 @@ export default function App() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
+
+          <button
+            onClick={() => {
+              if (selectedTrack || currentTrack) {
+                setIsExportModalOpen(true);
+              }
+            }}
+            disabled={!selectedTrack && !currentTrack}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded bg-[#121620] hover:bg-[#1f2838] border border-[#00f0ff]/40 text-xs font-mono font-bold text-[#00f0ff] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
+            title="Export 4K/1080p 60FPS Video"
+          >
+            <span>⚡ EXPORT VIDEO</span>
+          </button>
         </div>
 
         {/* Center: Viewport Switcher */}
@@ -765,6 +782,13 @@ export default function App() {
                     <span>▶ ENGAGE AUDIO TELEMETRY</span>
                   </button>
 
+                  <button
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="w-full py-2 bg-[#121620] hover:bg-[#1c2436] border border-[#00f0ff]/50 text-[#00f0ff] hover:text-white font-mono font-bold text-xs rounded transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center space-x-2"
+                  >
+                    <span>⚡ EXPORT 4K / 60FPS MASTER</span>
+                  </button>
+
                   {/* Data Attributes */}
                   <div className="border-t border-[#1c222c] pt-3 space-y-2 font-mono text-xs">
                     <div className="flex justify-between py-1 border-b border-[#141822]">
@@ -951,6 +975,15 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ── OFFLINE FRAME-STEPPER EXPORT MODAL ───────────────────────── */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        audioFilePath={(selectedTrack || currentTrack)?.file_path || ''}
+        trackTitle={(selectedTrack || currentTrack)?.title || (selectedTrack || currentTrack)?.file_name || 'Audio Track'}
+        trackArtist={(selectedTrack || currentTrack)?.artist_name || 'Unknown Artist'}
+      />
     </div>
   );
 }

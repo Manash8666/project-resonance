@@ -47,6 +47,30 @@ const resonanceAPI = {
   // On-demand art (data URL string or null)
   getCoverArt: (id: number): Promise<string | null> =>
     ipcRenderer.invoke('library:getCoverArt', id),
+
+  // Video Export Pipeline
+  selectSavePath: (defaultName?: string): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:selectSavePath', defaultName),
+
+  startRender: (settings: {
+    width: number;
+    height: number;
+    fps: number;
+    codec: 'libx264' | 'libx265';
+    audioPath: string;
+    outputPath: string;
+  }): Promise<string> =>
+    ipcRenderer.invoke('export:start', settings),
+
+  onRenderProgress: (cb: (percent: number) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, percent: number) => cb(percent);
+    ipcRenderer.on('export:progress', handler);
+    return () => ipcRenderer.removeListener('export:progress', handler);
+  },
+
+  finishRender: () => {
+    ipcRenderer.send('export:complete');
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('resonance', resonanceAPI);
