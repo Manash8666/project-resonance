@@ -1,0 +1,21 @@
+{
+  "name": "project-resonance",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:desktop": "pnpm --filter desktop dev",
+    "build:desktop": "pnpm --filter desktop build",
+    "build:all": "pnpm -r build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.15.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.15.0"
+}
