@@ -1,6 +1,7 @@
 // apps/desktop/src/main/preload.ts
 import { contextBridge, ipcRenderer } from 'electron';
 import type { SortField, SortDir, ScanProgress, ScanResult, Track } from 'library-core';
+import type { WordTimestamp } from 'ai-transcriber';
 
 // ─── Typed API surface exposed to the renderer ────────────────────────────────
 
@@ -71,6 +72,19 @@ const resonanceAPI = {
   finishRender: () => {
     ipcRenderer.send('export:complete');
   },
+
+  // AI Whisper Transcription Pipeline
+  initAiModel: (): Promise<boolean> =>
+    ipcRenderer.invoke('ai:init'),
+
+  onAiProgress: (cb: (progress: any) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, progress: any) => cb(progress);
+    ipcRenderer.on('ai:progress', handler);
+    return () => ipcRenderer.removeListener('ai:progress', handler);
+  },
+
+  transcribeTrack: (filePath: string): Promise<WordTimestamp[]> =>
+    ipcRenderer.invoke('ai:transcribe', filePath),
 } as const;
 
 contextBridge.exposeInMainWorld('resonance', resonanceAPI);
@@ -78,3 +92,4 @@ contextBridge.exposeInMainWorld('api', resonanceAPI);
 
 // Re-export the type so renderer can import it without touching Node
 export type ResonanceAPI = typeof resonanceAPI;
+export type { WordTimestamp };

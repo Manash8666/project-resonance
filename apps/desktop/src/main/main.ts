@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { LibraryEngine } from 'library-core';
 import type { SortField, SortDir } from 'library-core';
 import { VideoAssembler, RenderSettings } from './workers/videoAssembler.js';
+import { TranscriptionEngine } from 'ai-transcriber';
 
 // Register media protocol privileges before app ready
 protocol.registerSchemesAsPrivileged([
@@ -27,6 +28,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow: BrowserWindow | null = null;
 let library: LibraryEngine;
+let aiEngine: TranscriptionEngine | null = null;
 
 // ─── Window ───────────────────────────────────────────────────────────────────
 
@@ -163,6 +165,22 @@ function registerHandlers(): void {
 
     await renderPromise;
     return settings.outputPath;
+  });
+
+  // ─── AI Whisper Transcription ──────────────────────────────────────────────
+  ipcMain.handle('ai:init', async (event) => {
+    if (!aiEngine) aiEngine = new TranscriptionEngine();
+    await aiEngine.initialize((progress) => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('ai:progress', progress);
+      }
+    });
+    return true;
+  });
+
+  ipcMain.handle('ai:transcribe', async (_event, filePath: string) => {
+    if (!aiEngine) aiEngine = new TranscriptionEngine();
+    return await aiEngine.transcribe(filePath);
   });
 }
 
