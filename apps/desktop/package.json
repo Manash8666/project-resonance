@@ -25,9 +25,11 @@
     "library-core": "workspace:*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-resizable-panels": "^4.14.8",
     "react-window": "^2.5.0",
     "three": "^0.184.0",
-    "visual-engine": "workspace:*"
+    "visual-engine": "workspace:*",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
