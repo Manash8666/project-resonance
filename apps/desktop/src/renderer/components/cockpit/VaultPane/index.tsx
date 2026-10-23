@@ -2,6 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { List } from 'react-window';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
+import { audioEngine } from '../../../audio/AudioEngine.js';
 import type { Track } from '../../../types/track.js';
 import { VaultRow } from './components/VaultRow.js';
 
@@ -82,7 +83,15 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
                   editingField={editingCell?.id === track.id ? editingCell.field : null}
                   editValue={editValue}
                   onSelect={() => handleSelect(track)}
-                  onDoubleClick={() => onPlayTrack?.(track)}
+                  onDoubleClick={() => {
+                    if (onPlayTrack) {
+                      onPlayTrack(track);
+                    } else {
+                      handleSelect(track);
+                      audioEngine.loadTrack(track.file_path);
+                      void audioEngine.play();
+                    }
+                  }}
                   onStartEdit={(field, val) => handleStartEdit(track.id, field, val)}
                   onEditChange={(val) => setEditValue(val)}
                   onSaveEdit={handleSaveEdit}

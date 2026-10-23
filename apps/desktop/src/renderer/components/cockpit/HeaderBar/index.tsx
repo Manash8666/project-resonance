@@ -2,7 +2,11 @@
 import React, { useState } from 'react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 
-export const HeaderBar: React.FC = () => {
+export interface HeaderBarProps {
+  onScan?: () => void;
+}
+
+export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
   const isScanning = useResonanceStore((s) => s.scanStatus === 'loading');
   const setScanStatusStore = useResonanceStore((s) => s.setScanStatus);
   const setTracks = useResonanceStore((s) => s.setTracks);
@@ -16,6 +20,10 @@ export const HeaderBar: React.FC = () => {
   const [scanStatus, setScanStatus] = useState<string | null>(null);
 
   const handleScanFolder = async () => {
+    if (onScan) {
+      onScan();
+      return;
+    }
     if (!window.resonance?.openFolder) return;
     try {
       const folderPath = await window.resonance.openFolder();

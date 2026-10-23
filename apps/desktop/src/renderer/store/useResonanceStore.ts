@@ -20,6 +20,7 @@ export interface VaultState {
   setSelectedTrackId: (id: number | null) => void;
   setSelectedTrack: (track: Track | null) => void;
   setScanStatus: (status: AsyncStatus, error?: string | null) => void;
+  setScanning: (scanning: boolean) => void;
   setSearchQuery: (query: string) => void;
   scanLibrary: (dirPath: string) => Promise<void>;
 }
@@ -81,6 +82,7 @@ export const useResonanceStore = create<ResonanceStore>()(
       setSelectedTrackId: (selectedTrackId) => set({ selectedTrackId }),
       setSelectedTrack: (selectedTrack) => set({ selectedTrack }),
       setScanStatus: (scanStatus, scanError = null) => set({ scanStatus, scanError }),
+      setScanning: (scanning: boolean) => set({ scanStatus: scanning ? 'loading' : 'idle' }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),
 
       scanLibrary: async (dirPath: string) => {

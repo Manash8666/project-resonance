@@ -1,6 +1,6 @@
-// apps/desktop/src/renderer/components/cockpit/TransportDeck/index.tsx
 import React, { useMemo } from 'react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
+import { audioEngine } from '../../../audio/AudioEngine.js';
 import { WaveformPreview } from './components/WaveformPreview.js';
 
 export interface TransportDeckProps {
@@ -23,6 +23,10 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
   const seekTo = useResonanceStore((s) => s.seekTo);
   const bands = useResonanceStore((s) => s.bands);
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
+
+  const handleTogglePlay = onTogglePlay ?? (() => audioEngine.toggle());
+  const handleSeek = onSeek ?? ((t: number) => audioEngine.seek(t));
+  const handleVolumeChange = onVolumeChange ?? ((v: number) => audioEngine.setVolume(v));
 
   // Parse cached waveform peaks if present on selectedTrack
   const parsedPeaks = useMemo<number[] | null>(() => {
@@ -48,7 +52,7 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
     const newTime = parseFloat(e.target.value);
     setScrubbing(true);
     seekTo(newTime);
-    onSeek?.(newTime);
+    handleSeek(newTime);
   };
 
   return (
@@ -56,7 +60,7 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
       {/* Left: Play/Pause & Now Playing Info */}
       <div className="flex items-center space-x-4 w-72">
         <button
-          onClick={onTogglePlay}
+          onClick={handleTogglePlay}
           className="w-10 h-10 rounded-full bg-[#121620] hover:bg-[#1c2333] border border-[#232b3b] hover:border-[#00f0ff] flex items-center justify-center text-[#00f0ff] cursor-pointer transition-all shadow-md active:scale-95 shrink-0"
         >
           {isPlaying ? (
@@ -145,7 +149,7 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               setVolume(v);
-              onVolumeChange?.(v);
+              handleVolumeChange(v);
             }}
             className="w-16 h-1 bg-[#1c222c] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
           />

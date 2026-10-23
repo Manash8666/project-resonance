@@ -5,20 +5,72 @@ import { AlbumArtPreview } from './components/AlbumArtPreview.js';
 import { ShaderTuning } from './components/ShaderTuning.js';
 
 export interface InspectorRackProps {
-  coverArtUrl: string | null;
+  coverArtUrl?: string | null;
   onAutoTranscribe?: () => Promise<void>;
   isTranscribing?: boolean;
   transcriptionStatus?: string | null;
 }
 
 export const InspectorRack: React.FC<InspectorRackProps> = ({
-  coverArtUrl,
+  coverArtUrl = null,
   onAutoTranscribe,
-  isTranscribing = false,
-  transcriptionStatus = null,
+  isTranscribing: externalIsTranscribing,
+  transcriptionStatus: externalStatus,
 }) => {
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
+  const setSelectedTrack = useResonanceStore((s) => s.setSelectedTrack);
+  const setTracks = useResonanceStore((s) => s.setTracks);
   const activeLyrics = useResonanceStore((s) => s.activeLyrics);
+  const setActiveLyrics = useResonanceStore((s) => s.setActiveLyrics);
+
+  const [internalCoverArt, setInternalCoverArt] = React.useState<string | null>(null);
+  const [internalIsTranscribing, setInternalIsTranscribing] = React.useState(false);
+  const [internalStatus, setInternalStatus] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (coverArtUrl) {
+      setInternalCoverArt(coverArtUrl);
+      return;
+    }
+    if (!selectedTrack?.id) {
+      setInternalCoverArt(null);
+      return;
+    }
+    window.resonance?.getCoverArt?.(selectedTrack.id)
+      .then((art) => setInternalCoverArt(art))
+      .catch(() => setInternalCoverArt(null));
+  }, [coverArtUrl, selectedTrack?.id]);
+
+  const effectiveCoverArt = coverArtUrl ?? internalCoverArt;
+  const isTranscribing = externalIsTranscribing ?? internalIsTranscribing;
+  const transcriptionStatus = externalStatus ?? internalStatus;
+
+  const handleAutoTranscribeInternal = async () => {
+    if (onAutoTranscribe) {
+      await onAutoTranscribe();
+      return;
+    }
+    if (!selectedTrack) return;
+    setInternalIsTranscribing(true);
+    setInternalStatus('Whisper AI: Calculating word-level timestamps...');
+    try {
+      const timestamps = await window.resonance.transcribeTrack(selectedTrack.file_path);
+      await window.resonance.saveLyrics(selectedTrack.id, timestamps, timestamps.length === 0);
+      setActiveLyrics(timestamps);
+      setSelectedTrack({ ...selectedTrack, has_lyrics: timestamps.length > 0 ? 1 : 0 });
+      setTracks(
+        useResonanceStore.getState().tracks.map((t) =>
+          t.id === selectedTrack.id ? { ...t, has_lyrics: timestamps.length > 0 ? 1 : 0 } : t
+        )
+      );
+      setInternalStatus(`✓ Transcribed: ${timestamps.length} words synchronized.`);
+      setTimeout(() => setInternalStatus(null), 3000);
+    } catch (err) {
+      setInternalStatus(`Error: ${String(err)}`);
+    } finally {
+      setInternalIsTranscribing(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#080a0e] border-l border-[#1c222c] p-4 text-zinc-300 font-mono select-none overflow-y-auto space-y-5 text-xs">
@@ -35,12 +87,12 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
       {/* Selected Track Overview & Cover Art */}
       {selectedTrack ? (
         <div className="space-y-3">
-          <AlbumArtPreview coverArtUrl={coverArtUrl} track={selectedTrack} />
+          <AlbumArtPreview coverArtUrl={effectiveCoverArt} track={selectedTrack} />
 
           {/* AI Whisper Transcription Trigger */}
           <div className="space-y-2 pt-1">
             <button
-              onClick={onAutoTranscribe}
+              onClick={handleAutoTranscribeInternal}
               disabled={isTranscribing}
               className={`w-full py-2 border font-mono font-bold text-xs rounded transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center space-x-2 ${
                 selectedTrack.has_lyrics
