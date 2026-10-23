@@ -29,6 +29,7 @@ const isDev = process.env.NODE_ENV === 'development';
 let mainWindow: BrowserWindow | null = null;
 let library: LibraryEngine;
 let aiEngine: TranscriptionEngine | null = null;
+let activeAssembler: VideoAssembler | null = null;
 
 // Allowed media audio extensions for secure protocol streaming
 const ALLOWED_AUDIO_EXTENSIONS = new Set([
@@ -157,6 +158,7 @@ function registerHandlers(): void {
     });
 
     const assembler = new VideoAssembler();
+    activeAssembler = assembler;
 
     const renderPromise = assembler.start(settings, (percent) => {
       if (!event.sender.isDestroyed()) {
@@ -186,10 +188,11 @@ function registerHandlers(): void {
     try {
       await renderPromise;
     } catch (err) {
-      assembler.finish();
+      assembler.abort();
       if (!renderWindow.isDestroyed()) renderWindow.close();
       throw err;
     } finally {
+      activeAssembler = null;
       ipcMain.removeListener('export:complete', onComplete);
     }
     return settings.outputPath;
@@ -367,7 +370,45 @@ app.whenReady().then(() => {
   });
 });
 
+let isQuitting = false;
+
+app.on('before-quit', (e) => {
+  if (isQuitting) return;
+  e.preventDefault();
+  isQuitting = true;
+
+  // 1. Broadcast teardown to all renderers to mute Web Audio and release WebGL contexts
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('app:teardown');
+    }
+  }
+
+  // 2. Abort any active FFmpeg export processes to prevent orphaned background tasks
+  if (activeAssembler) {
+    try {
+      activeAssembler.abort();
+    } catch (err) {
+      console.error('Error aborting active assembler during shutdown:', err);
+    }
+    activeAssembler = null;
+  }
+
+  // 3. Checkpoint SQLite WAL and close connection
+  try {
+    library?.close();
+  } catch (err) {
+    console.error('Failed to cleanly close library database:', err);
+  }
+
+  // 4. Finalize exit cleanly
+  setTimeout(() => {
+    app.exit(0);
+  }, 100);
+});
+
 app.on('window-all-closed', () => {
-  library?.close();
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });

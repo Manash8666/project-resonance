@@ -42,6 +42,14 @@ const App: React.FC = () => {
     };
 
     void initializeApp();
+
+    const cleanupTeardown = window.resonance.onTeardown?.(() => {
+      audioEngine.destroy();
+    });
+
+    return () => {
+      cleanupTeardown?.();
+    };
   }, [setTracks, setTrackCount]);
 
   const handleScanLibrary = async () => {

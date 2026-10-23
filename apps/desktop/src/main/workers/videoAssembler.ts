@@ -68,4 +68,18 @@ export class VideoAssembler {
       this.videoStream.end();
     }
   }
+
+  public abort(): void {
+    if (this.videoStream && !this.videoStream.destroyed) {
+      this.videoStream.destroy();
+    }
+    if (this.ffmpegProcess) {
+      try {
+        this.ffmpegProcess.kill('SIGKILL');
+      } catch {
+        // Process might already be closed
+      }
+      this.ffmpegProcess = null;
+    }
+  }
 }

@@ -348,6 +348,12 @@ export class LibraryEngine {
   }
 
   close(): void {
+    try {
+      this.db.pragma('wal_checkpoint(TRUNCATE)');
+      this.db.pragma('optimize');
+    } catch {
+      // Ignore pragma errors during teardown
+    }
     this.db.close();
   }
 }

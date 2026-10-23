@@ -40,6 +40,9 @@ export interface ResonanceAPI {
   getConfig: (key: string) => Promise<any>;
   setConfig: (key: string, value: any) => Promise<any>;
   removeConfig: (key: string) => Promise<any>;
+
+  // Lifecycle
+  onTeardown?: (cb: () => void) => () => void;
 }
 
 declare global {

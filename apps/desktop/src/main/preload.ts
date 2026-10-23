@@ -112,6 +112,13 @@ const resonanceAPI = {
 
   removeConfig: (key: string): Promise<boolean> =>
     ipcRenderer.invoke('config:remove', key),
+
+  // Teardown hook
+  onTeardown: (cb: () => void) => {
+    const handler = () => cb();
+    ipcRenderer.on('app:teardown', handler);
+    return () => ipcRenderer.removeListener('app:teardown', handler);
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('resonance', resonanceAPI);
