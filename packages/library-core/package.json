@@ -1,0 +1,28 @@
+{
+  "name": "library-core",
+  "version": "1.0.0",
+  "description": "High-performance SQLite + music-metadata engine for Project Resonance",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "music-metadata": "^12.2.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}
