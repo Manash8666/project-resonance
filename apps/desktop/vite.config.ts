@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 // Vite config for the renderer process only.
 // The main process (Electron) is compiled separately via tsc.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   root: path.resolve(__dirname, 'src/renderer'),
   publicDir: path.resolve(__dirname, 'public'),
   build: {

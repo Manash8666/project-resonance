@@ -18,17 +18,21 @@
     "electron-is-dev": "^3.0.1",
     "library-core": "workspace:*",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-window": "^2.5.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/react-window": "^2.0.0",
     "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^10.0.6",
     "cross-env": "^10.1.0",
     "electron": "^45.0.0",
     "electron-builder": "^26.15.3",
+    "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "wait-on": "^9.5.1"

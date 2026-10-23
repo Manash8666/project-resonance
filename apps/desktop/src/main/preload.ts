@@ -8,6 +8,8 @@ const resonanceAPI = {
   // Native folder picker
   openFolder: (): Promise<string | null> =>
     ipcRenderer.invoke('dialog:openFolder'),
+  selectFolder: (): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:openFolder'),
 
   // Scan + streaming progress
   scanDirectory: (dirPath: string): Promise<ScanResult> =>
@@ -22,10 +24,10 @@ const resonanceAPI = {
 
   // Data queries
   getTracks: (
-    limit: number,
-    offset: number,
-    sortBy: SortField,
-    sortDir: SortDir,
+    limit = 1000,
+    offset = 0,
+    sortBy: SortField = 'artist_name',
+    sortDir: SortDir = 'ASC',
   ): Promise<Omit<Track, 'cover_art'>[]> =>
     ipcRenderer.invoke('library:getTracks', limit, offset, sortBy, sortDir),
 
@@ -48,6 +50,7 @@ const resonanceAPI = {
 } as const;
 
 contextBridge.exposeInMainWorld('resonance', resonanceAPI);
+contextBridge.exposeInMainWorld('api', resonanceAPI);
 
 // Re-export the type so renderer can import it without touching Node
 export type ResonanceAPI = typeof resonanceAPI;
