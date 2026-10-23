@@ -83,8 +83,13 @@ const resonanceAPI = {
     return () => ipcRenderer.removeListener('ai:progress', handler);
   },
 
-  transcribeTrack: (filePath: string): Promise<WordTimestamp[]> =>
-    ipcRenderer.invoke('ai:transcribe', filePath),
+  transcribeTrack: async (filePath: string, trackId?: number): Promise<WordTimestamp[]> => {
+    const res = await ipcRenderer.invoke('resonance:transcribeTrack', filePath, trackId);
+    if (res && res.success && res.data?.words) {
+      return res.data.words;
+    }
+    return Array.isArray(res) ? res : (res?.words ?? []);
+  },
 
   saveLyrics: (trackId: number, words: WordTimestamp[], isInstrumental = false): Promise<boolean> =>
     ipcRenderer.invoke('library:saveLyrics', trackId, words, isInstrumental),

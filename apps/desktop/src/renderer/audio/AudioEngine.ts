@@ -71,7 +71,19 @@ export class AudioEngine {
     });
 
     this.audioElement.addEventListener('ended', () => {
-      useResonanceStore.getState().setIsPlaying(false);
+      const state = useResonanceStore.getState();
+      state.setIsPlaying(false);
+      const { tracks, selectedTrackId } = state;
+      if (tracks.length > 0 && selectedTrackId !== null) {
+        const currentIndex = tracks.findIndex((t) => t.id === selectedTrackId);
+        if (currentIndex >= 0 && currentIndex < tracks.length - 1) {
+          const nextTrack = tracks[currentIndex + 1];
+          state.setSelectedTrackId(nextTrack.id);
+          state.setSelectedTrack(nextTrack);
+          this.loadTrack(nextTrack.file_path);
+          void this.play();
+        }
+      }
     });
   }
 

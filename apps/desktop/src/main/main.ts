@@ -1,5 +1,4 @@
-// apps/desktop/src/main/main.ts
-import { app, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol, net, session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -31,6 +30,11 @@ let mainWindow: BrowserWindow | null = null;
 let library: LibraryEngine;
 let aiEngine: TranscriptionEngine | null = null;
 
+// Allowed media audio extensions for secure protocol streaming
+const ALLOWED_AUDIO_EXTENSIONS = new Set([
+  '.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac', '.wma', '.opus', '.aiff', '.alac'
+]);
+
 // ─── Window ───────────────────────────────────────────────────────────────────
 
 function createWindow(): void {
@@ -48,6 +52,19 @@ function createWindow(): void {
       nodeIntegration: false,
       sandbox: true,
     },
+  });
+
+  // Security Hardening: Prevent opening external untrusted windows
+  mainWindow.webContents.setWindowOpenHandler(() => {
+    return { action: 'deny' };
+  });
+
+  // Security Hardening: Prevent navigation away from the local app
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    if (isDev && navigationUrl.startsWith('http://localhost:5173')) {
+      return;
+    }
+    event.preventDefault();
   });
 
   if (isDev) {
@@ -135,6 +152,7 @@ function registerHandlers(): void {
         preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
+        sandbox: true,
       },
     });
 
@@ -159,12 +177,21 @@ function registerHandlers(): void {
     await renderWindow.loadURL(renderUrl);
 
     // Wait for renderer completion signal
-    ipcMain.once('export:complete', () => {
+    const onComplete = () => {
       assembler.finish();
       if (!renderWindow.isDestroyed()) renderWindow.close();
-    });
+    };
+    ipcMain.once('export:complete', onComplete);
 
-    await renderPromise;
+    try {
+      await renderPromise;
+    } catch (err) {
+      assembler.finish();
+      if (!renderWindow.isDestroyed()) renderWindow.close();
+      throw err;
+    } finally {
+      ipcMain.removeListener('export:complete', onComplete);
+    }
     return settings.outputPath;
   });
 
@@ -242,18 +269,91 @@ function registerHandlers(): void {
     writeConfigFile(cfg);
     return true;
   });
+
+  // ─── Dual Namespace Aliases: resonance:* Protocol Compatibility ──────────────
+  ipcMain.handle('resonance:getTracks', async (_e, limit = 1000, offset = 0) => {
+    try {
+      const tracks = library.getTracks(limit, offset);
+      return { success: true, data: tracks };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('resonance:scanDirectory', async (_e, dirPath: string) => {
+    try {
+      const result = await library.scanDirectory(dirPath);
+      return { success: true, data: result };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('resonance:transcribeTrack', async (_e, filePath: string, trackId?: number) => {
+    try {
+      if (!aiEngine) aiEngine = new TranscriptionEngine();
+      await aiEngine.initialize();
+      const words = await aiEngine.transcribe(filePath);
+      const isInstrumental = words.length === 0;
+      if (trackId) {
+        library.saveTranscription(trackId, words, isInstrumental);
+      }
+      return { success: true, data: { words, isInstrumental } };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('resonance:selectFolder', async () => {
+    if (!mainWindow) return null;
+    const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+      title: 'Select Music Folder',
+    });
+    return canceled ? null : filePaths[0];
+  });
+
+  ipcMain.handle('resonance:getConfig', async (_e, key: string) => {
+    const cfg = readConfigFile();
+    return cfg[key] ?? null;
+  });
+
+  ipcMain.handle('resonance:setConfig', async (_e, key: string, value: any) => {
+    const cfg = readConfigFile();
+    cfg[key] = value;
+    writeConfigFile(cfg);
+    return true;
+  });
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  // Security Hardening: Deny all unsolicited device permissions
+  session.defaultSession.setPermissionRequestHandler((_wc, _perm, callback) => {
+    callback(false);
+  });
+
+  // Security Hardening: Path-traversal proof and extension-validated media streaming
   protocol.handle('media', (request) => {
-    const url = new URL(request.url);
-    let filePath = decodeURIComponent(url.pathname);
-    if (process.platform === 'win32' && filePath.startsWith('/')) {
-      filePath = filePath.slice(1);
+    try {
+      const url = new URL(request.url);
+      let filePath = decodeURIComponent(url.pathname);
+      if (process.platform === 'win32' && filePath.startsWith('/')) {
+        filePath = filePath.slice(1);
+      }
+      const normalizedPath = path.resolve(path.normalize(filePath));
+      const ext = path.extname(normalizedPath).toLowerCase();
+
+      // Enforce allowed audio extensions & file existence
+      if (!ALLOWED_AUDIO_EXTENSIONS.has(ext) || !fs.existsSync(normalizedPath)) {
+        return new Response('Access Denied: Invalid audio target', { status: 403 });
+      }
+
+      return net.fetch(pathToFileURL(normalizedPath).toString());
+    } catch {
+      return new Response('Bad Request', { status: 400 });
     }
-    return net.fetch(pathToFileURL(filePath).toString());
   });
 
   const dbPath = path.join(app.getPath('userData'), 'resonance_library.db');

@@ -7,10 +7,10 @@ import path from 'path';
 // The main process (Electron) is compiled separately via tsc.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  root: path.resolve(__dirname, 'src/renderer'),
-  publicDir: path.resolve(__dirname, 'public'),
+  root: path.resolve(import.meta.dirname, 'src/renderer'),
+  publicDir: path.resolve(import.meta.dirname, 'public'),
   build: {
-    outDir: path.resolve(__dirname, 'dist/renderer'),
+    outDir: path.resolve(import.meta.dirname, 'dist/renderer'),
     emptyOutDir: true,
   },
   server: {
@@ -21,7 +21,7 @@ export default defineConfig({
   // try to resolve it as an npm module.
   resolve: {
     alias: {
-      '@renderer': path.resolve(__dirname, 'src/renderer'),
+      '@renderer': path.resolve(import.meta.dirname, 'src/renderer'),
     },
   },
 });

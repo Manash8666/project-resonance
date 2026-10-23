@@ -102,17 +102,32 @@ const BackgroundArtQuad: React.FC<{ url: string | null }> = ({ url }) => {
 
 // ─── Main VisualizerScene Component ───────────────────────────────────────────
 export interface VisualizerSceneProps {
-  audioElement: HTMLAudioElement | null;
+  audioElement?: HTMLAudioElement | null;
+  dataTexture?: THREE.DataTexture | null;
+  bandsRef?: React.RefObject<AudioBands>;
   albumArtUrl?: string | null;
   className?: string;
 }
 
 export const VisualizerScene: React.FC<VisualizerSceneProps> = ({
-  audioElement,
+  audioElement = null,
+  dataTexture = null,
+  bandsRef: externalBandsRef,
   albumArtUrl = null,
   className = 'w-full h-full',
 }) => {
-  const { textureRef, bands, bandsRef, isReady } = useAudioTelemetry(audioElement);
+  // If dataTexture is provided externally, skip creating internal AudioContext
+  const hasExternalTexture = Boolean(dataTexture);
+  const internalTelemetry = useAudioTelemetry(hasExternalTexture ? null : audioElement);
+
+  const fallbackTextureRef = useRef<THREE.DataTexture | null>(null);
+  fallbackTextureRef.current = dataTexture;
+
+  const textureRef = hasExternalTexture ? fallbackTextureRef : internalTelemetry.textureRef;
+  const bandsRef = hasExternalTexture
+    ? (externalBandsRef || internalTelemetry.bandsRef)
+    : internalTelemetry.bandsRef;
+  const isReady = hasExternalTexture || internalTelemetry.isReady;
 
   return (
     <div className={`relative ${className} bg-[#060709] overflow-hidden rounded-lg border border-[#1c222c]`}>
@@ -138,15 +153,7 @@ export const VisualizerScene: React.FC<VisualizerSceneProps> = ({
         <div className={`w-2 h-2 rounded-full ${isReady ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
         <div className="flex items-center space-x-3 text-[10px]">
           <span>
-            BASS: <span className="text-[#00f0ff] font-bold">{(bands.bass * 100).toFixed(0)}%</span>
-          </span>
-          <span className="text-zinc-600">|</span>
-          <span>
-            MID: <span className="text-amber-400 font-bold">{(bands.mid * 100).toFixed(0)}%</span>
-          </span>
-          <span className="text-zinc-600">|</span>
-          <span>
-            TREBLE: <span className="text-fuchsia-400 font-bold">{(bands.treble * 100).toFixed(0)}%</span>
+            STATUS: <span className="text-[#00f0ff] font-bold">{isReady ? 'ONLINE' : 'STANDBY'}</span>
           </span>
         </div>
       </div>

@@ -41,6 +41,22 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
       .catch(() => setInternalCoverArt(null));
   }, [coverArtUrl, selectedTrack?.id]);
 
+  React.useEffect(() => {
+    if (!selectedTrack?.id) {
+      setActiveLyrics(null);
+      return;
+    }
+    window.resonance?.getLyrics?.(selectedTrack.id)
+      .then((lyrics) => {
+        if (Array.isArray(lyrics) && lyrics.length > 0) {
+          setActiveLyrics(lyrics);
+        } else {
+          setActiveLyrics(null);
+        }
+      })
+      .catch(() => setActiveLyrics(null));
+  }, [selectedTrack?.id, setActiveLyrics]);
+
   const effectiveCoverArt = coverArtUrl ?? internalCoverArt;
   const isTranscribing = externalIsTranscribing ?? internalIsTranscribing;
   const transcriptionStatus = externalStatus ?? internalStatus;

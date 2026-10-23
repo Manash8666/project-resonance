@@ -49,6 +49,7 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
       <div className="absolute inset-0">
         <VisualizerScene
           audioElement={effectiveAudioElement}
+          dataTexture={audioEngine.getDataTexture()}
           albumArtUrl={internalCoverArt}
         />
       </div>

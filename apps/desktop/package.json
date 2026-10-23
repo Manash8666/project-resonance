@@ -2,6 +2,7 @@
   "name": "desktop",
   "version": "0.1.0",
   "description": "Project Resonance — Electron desktop shell",
+  "author": "Manash Dash <manashdash@aol.com>",
   "private": true,
   "main": "dist/main/main.js",
   "type": "module",

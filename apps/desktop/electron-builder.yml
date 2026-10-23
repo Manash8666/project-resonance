@@ -1,5 +1,8 @@
 appId: com.resonance.desktop
 productName: "Project Resonance"
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
 
 directories:
   buildResources: "build"

@@ -8,9 +8,30 @@ import { VaultRow } from './components/VaultRow.js';
 
 export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ onPlayTrack }) => {
   const tracks = useResonanceStore((s) => s.tracks);
+  const searchQuery = useResonanceStore((s) => s.searchQuery);
   const selectedTrackId = useResonanceStore((s) => s.selectedTrackId);
   const setSelectedTrackId = useResonanceStore((s) => s.setSelectedTrackId);
   const setSelectedTrack = useResonanceStore((s) => s.setSelectedTrack);
+
+  const [searchResults, setSearchResults] = useState<Track[] | null>(null);
+
+  React.useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await window.resonance.searchTracks(searchQuery.trim(), 200);
+        setSearchResults(Array.isArray(res) ? res : []);
+      } catch (err) {
+        console.error('FTS5 Search error:', err);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const displayedTracks = searchResults !== null ? searchResults : tracks;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null);
@@ -58,18 +79,27 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
 
       {/* Virtualized Rows */}
       <div className="flex-1 min-h-0">
-        {tracks.length === 0 ? (
+        {displayedTracks.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-xs p-4 text-center">
-            <span>No tracks indexed.</span>
-            <span className="text-[10px] text-zinc-700 mt-1">Click "Scan Music Folder" in top bar.</span>
+            {searchQuery ? (
+              <>
+                <span>No matching tracks found.</span>
+                <span className="text-[10px] text-zinc-700 mt-1">Query: "{searchQuery}"</span>
+              </>
+            ) : (
+              <>
+                <span>No tracks indexed.</span>
+                <span className="text-[10px] text-zinc-700 mt-1">Click "Scan Music Folder" in top bar.</span>
+              </>
+            )}
           </div>
         ) : (
           <List
-            rowCount={tracks.length}
+            rowCount={displayedTracks.length}
             rowHeight={36}
             rowProps={{} as any}
             rowComponent={({ index, style }: { index: number; style: React.CSSProperties }) => {
-              const track = tracks[index];
+              const track = displayedTracks[index];
               if (!track) return null;
               const isSelected = track.id === selectedTrackId;
 

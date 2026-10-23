@@ -205,7 +205,7 @@ export class LibraryEngine {
       .prepare(
         `SELECT id, file_path, file_name, title, artist_name, album_name,
                 genre, year, track_number, duration_ms, cover_art_mime,
-                has_lyrics, is_instrumental,
+                has_lyrics, is_instrumental, waveform_peaks,
                 date_added, date_modified
          FROM tracks
          ORDER BY ${col} ${dir}
@@ -228,7 +228,7 @@ export class LibraryEngine {
       .prepare(
         `SELECT t.id, t.file_path, t.file_name, t.title, t.artist_name,
                 t.album_name, t.genre, t.year, t.track_number, t.duration_ms,
-                t.cover_art_mime, t.has_lyrics, t.is_instrumental,
+                t.cover_art_mime, t.has_lyrics, t.is_instrumental, t.waveform_peaks,
                 t.date_added, t.date_modified
          FROM tracks_fts
          JOIN tracks t ON tracks_fts.rowid = t.id

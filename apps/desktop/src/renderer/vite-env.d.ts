@@ -22,7 +22,7 @@ export interface ResonanceAPI {
   // AI Whisper transcription
   initAiModel?: () => Promise<boolean>;
   onAiProgress?: (cb: (progress: any) => void) => () => void;
-  transcribeTrack: (filePath: string) => Promise<any>;
+  transcribeTrack: (filePath: string, trackId?: number) => Promise<any>;
   saveLyrics: (trackId: number, words: any, isInstrumental?: boolean) => Promise<boolean>;
   getLyrics: (trackId: number) => Promise<any>;
 
