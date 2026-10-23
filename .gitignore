@@ -7,6 +7,8 @@ dist/
 release/
 out/
 build/
+!apps/desktop/build/
+!apps/desktop/build/**
 
 # Electron
 *.exe
