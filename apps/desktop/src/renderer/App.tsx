@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { List } from 'react-window';
 import type { SortField, SortDir, ScanProgress, Track } from 'library-core';
-import { ResonanceVisualizer, DynamicsMode } from 'visual-engine';
+import { ResonanceVisualizer, VisualizerScene, DynamicsMode } from 'visual-engine';
 
 // Shape of track without cover art BLOB returned by IPC
 export type GridTrack = Omit<Track, 'cover_art'>;
@@ -26,6 +26,7 @@ export default function App() {
   // View layout & Dynamics Mode
   const [viewMode, setViewMode] = useState<'grid' | 'split' | 'visualizer'>('split');
   const [dynamicsMode, setDynamicsMode] = useState<DynamicsMode>('ballistic');
+  const [visualizerStyle, setVisualizerStyle] = useState<'3d-mesh' | '2d-hud'>('3d-mesh');
 
   // Sorting & Filtering
   const [sortBy, setSortBy] = useState<SortField>('artist_name');
@@ -617,11 +618,43 @@ export default function App() {
               viewMode === 'visualizer' ? 'flex-1' : 'h-64'
             } p-3 bg-[#08090a] transition-all duration-300 relative`}
           >
-            <ResonanceVisualizer
-              audioElement={audioRef.current}
-              dynamicsMode={dynamicsMode}
-              className="w-full h-full shadow-2xl"
-            />
+            {visualizerStyle === '3d-mesh' ? (
+              <VisualizerScene
+                audioElement={audioRef.current}
+                albumArtUrl={coverArtUrl}
+                className="w-full h-full shadow-2xl"
+              />
+            ) : (
+              <ResonanceVisualizer
+                audioElement={audioRef.current}
+                dynamicsMode={dynamicsMode}
+                className="w-full h-full shadow-2xl"
+              />
+            )}
+
+            {/* Quick Engine Style Switcher (3D Terrain vs 2D HUD) */}
+            <div className="absolute top-5 left-5 z-20 flex items-center space-x-1 bg-[#0b0e14]/85 backdrop-blur-xs border border-[#232b3b] p-1 rounded-md text-[10px] font-mono">
+              <button
+                onClick={() => setVisualizerStyle('3d-mesh')}
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                  visualizerStyle === '3d-mesh'
+                    ? 'bg-[#00f0ff] text-black font-bold'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                3D TERRAIN MESH
+              </button>
+              <button
+                onClick={() => setVisualizerStyle('2d-hud')}
+                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                  visualizerStyle === '2d-hud'
+                    ? 'bg-[#00f0ff] text-black font-bold'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                2D HUD SPECTRUM
+              </button>
+            </div>
           </div>
         )}
 

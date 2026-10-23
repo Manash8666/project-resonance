@@ -18,6 +18,8 @@
     "electron-is-dev": "^3.0.1",
     "library-core": "workspace:*",
     "visual-engine": "workspace:*",
+    "@react-three/fiber": "^9.8.0",
+    "three": "^0.184.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-window": "^2.5.0"
