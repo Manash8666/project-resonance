@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { List } from 'react-window';
 import type { SortField, SortDir, ScanProgress, Track } from 'library-core';
+import { ResonanceVisualizer, DynamicsMode } from 'visual-engine';
 
 // Shape of track without cover art BLOB returned by IPC
 export type GridTrack = Omit<Track, 'cover_art'>;
@@ -13,6 +14,18 @@ export default function App() {
   const [selectedTrack, setSelectedTrack] = useState<GridTrack | null>(null);
   const [coverArtUrl, setCoverArtUrl] = useState<string | null>(null);
   const [isLoadingArt, setIsLoadingArt] = useState(false);
+
+  // Audio Playback & Telemetry
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentTrack, setCurrentTrack] = useState<GridTrack | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.85);
+
+  // View layout & Dynamics Mode
+  const [viewMode, setViewMode] = useState<'grid' | 'split' | 'visualizer'>('split');
+  const [dynamicsMode, setDynamicsMode] = useState<DynamicsMode>('ballistic');
 
   // Sorting & Filtering
   const [sortBy, setSortBy] = useState<SortField>('artist_name');
@@ -35,16 +48,14 @@ export default function App() {
   const [batchResultMsg, setBatchResultMsg] = useState<string | null>(null);
 
   // Window viewport measurement
-  const [gridHeight, setGridHeight] = useState(window.innerHeight - 170);
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
 
   // Cache for loaded cover art
   const artCache = useRef<Map<number, string | null>>(new Map());
 
   // Listen to window resize
   useEffect(() => {
-    const handleResize = () => {
-      setGridHeight(window.innerHeight - 170);
-    };
+    const handleResize = () => setWindowHeight(window.innerHeight);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -113,7 +124,43 @@ export default function App() {
       });
   }, [selectedId, tracks]);
 
-  // Handle Scanning
+  // Audio Playback Handling
+  const playTrack = (track: GridTrack) => {
+    setCurrentTrack(track);
+    setSelectedId(track.id);
+    if (audioRef.current) {
+      audioRef.current.src = `media:///${encodeURIComponent(track.file_path)}`;
+      audioRef.current.volume = volume;
+      audioRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => console.error('Audio playback error:', err));
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      if (!currentTrack && tracks.length > 0) {
+        playTrack(tracks[0]);
+      } else {
+        audioRef.current.play().then(() => setIsPlaying(true)).catch(console.error);
+      }
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value);
+    setCurrentTime(time);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+  };
+
+  // Scanning
   const handleScan = async () => {
     try {
       const folder = await window.resonance.openFolder();
@@ -130,13 +177,11 @@ export default function App() {
       console.error('Directory scan error:', err);
     } finally {
       setIsScanning(false);
-      setTimeout(() => {
-        setScanProgress(null);
-      }, 3500);
+      setTimeout(() => setScanProgress(null), 3500);
     }
   };
 
-  // Toggle sorting
+  // Sorting
   const handleSort = (field: SortField) => {
     if (sortBy === field) {
       setSortDir((d) => (d === 'ASC' ? 'DESC' : 'ASC'));
@@ -165,6 +210,9 @@ export default function App() {
       if (selectedTrack?.id === id) {
         setSelectedTrack((prev) => (prev ? { ...prev, [field]: finalValue } : null));
       }
+      if (currentTrack?.id === id) {
+        setCurrentTrack((prev) => (prev ? { ...prev, [field]: finalValue } : null));
+      }
     } catch (err) {
       console.error('Failed to update field:', err);
     } finally {
@@ -173,7 +221,7 @@ export default function App() {
     }
   };
 
-  // Batch Artist Update
+  // Batch Artist Rename
   const handleBatchUpdateArtist = async () => {
     if (!oldArtistInput.trim() || !newArtistInput.trim()) return;
     try {
@@ -192,16 +240,22 @@ export default function App() {
     }
   };
 
-  // Format millisecond duration into MM:SS
-  const formatTime = (ms: number | null): string => {
-    if (ms == null || isNaN(ms)) return '--:--';
-    const totalSecs = Math.floor(ms / 1000);
+  // Duration Formatter
+  const formatTime = (msOrSec: number | null, isSec = false): string => {
+    if (msOrSec == null || isNaN(msOrSec)) return '0:00';
+    const totalSecs = Math.floor(isSec ? msOrSec : msOrSec / 1000);
     const mins = Math.floor(totalSecs / 60);
     const secs = totalSecs % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Row Renderer for react-window
+  // Calculated List Height based on viewMode
+  const listHeight =
+    viewMode === 'split'
+      ? Math.max(240, windowHeight - 480)
+      : Math.max(240, windowHeight - 210);
+
+  // Virtualized Row Component
   const renderRow = ({
     index,
     style,
@@ -221,22 +275,30 @@ export default function App() {
     if (!track) return null;
 
     const isSelected = track.id === rowSelectedId;
+    const isNowPlaying = currentTrack?.id === track.id;
 
     return (
       <div
         style={style}
         onClick={() => setSelectedId(track.id)}
+        onDoubleClick={() => playTrack(track)}
         className={`group flex items-center h-10 px-4 border-b border-[#1c222c] cursor-pointer text-xs select-none transition-colors ${
           isSelected
             ? 'bg-[#14233a] border-l-2 border-l-[#00f0ff] text-white shadow-sm'
+            : isNowPlaying
+            ? 'bg-[#0f1d2c] border-l-2 border-l-emerald-400 text-white'
             : index % 2 === 0
             ? 'bg-[#0a0c10] hover:bg-[#12161f] text-zinc-300'
             : 'bg-[#08090d] hover:bg-[#12161f] text-zinc-300'
         }`}
       >
-        {/* Track Index */}
-        <div className="w-10 font-mono text-[11px] text-zinc-600 group-hover:text-zinc-400">
-          {index + 1}
+        {/* Track Index or Playing Indicator */}
+        <div className="w-10 font-mono text-[11px] text-zinc-600 group-hover:text-zinc-400 flex items-center">
+          {isNowPlaying && isPlaying ? (
+            <span className="text-[#00f0ff] animate-pulse">▶</span>
+          ) : (
+            index + 1
+          )}
         </div>
 
         {/* Title */}
@@ -381,12 +443,24 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#08090a] text-zinc-200 select-none overflow-hidden font-sans">
+      {/* Hidden Native Audio Element wired to Web Audio Bridge */}
+      <audio
+        ref={audioRef}
+        onTimeUpdate={() => {
+          if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
+        }}
+        onLoadedMetadata={() => {
+          if (audioRef.current) setDuration(audioRef.current.duration);
+        }}
+        onEnded={() => setIsPlaying(false)}
+      />
+
       {/* ── DRAGGABLE TITLE BAR ────────────────────────────────────────────── */}
       <div className="title-bar-drag h-10 bg-[#0e1014] border-b border-[#1c222c] flex items-center justify-between px-4 z-20">
         <div className="flex items-center space-x-3">
           <div className="w-2.5 h-2.5 rounded-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff] animate-pulse" />
           <span className="font-mono text-xs font-bold tracking-widest text-zinc-100 uppercase">
-            ⚡ PROJECT RESONANCE <span className="text-zinc-600 font-normal">// CORE v1.0</span>
+            ⚡ PROJECT RESONANCE <span className="text-zinc-600 font-normal">// ZERO-ZERO CORE</span>
           </span>
         </div>
 
@@ -395,12 +469,15 @@ export default function App() {
             ENGINE: <span className="text-emerald-400 font-semibold">SQLITE FTS5</span>
           </span>
           <span className="px-2 py-0.5 rounded bg-[#161b24] border border-[#252e3e] text-zinc-400">
+            TELEMETRY: <span className="text-[#00f0ff] font-semibold">4096 FFT</span>
+          </span>
+          <span className="px-2 py-0.5 rounded bg-[#161b24] border border-[#252e3e] text-zinc-400">
             TOTAL: <span className="text-[#00f0ff] font-semibold">{trackCount.toLocaleString()}</span>
           </span>
         </div>
       </div>
 
-      {/* ── COMMAND TOOLBAR ─────────────────────────────────────────────────── */}
+      {/* ── COMMAND TOOLBAR & VIEW CONTROLLER ───────────────────────────────── */}
       <div className="h-14 bg-[#0a0c10] border-b border-[#1c222c] flex items-center justify-between px-4 gap-4 z-10">
         {/* Left: Scan & Batch Controls */}
         <div className="flex items-center space-x-2.5">
@@ -415,12 +492,7 @@ export default function App() {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
             <span>{isScanning ? 'Scanning...' : 'Scan Music Folder'}</span>
           </button>
@@ -432,9 +504,6 @@ export default function App() {
             }}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded bg-[#121620] hover:bg-[#1a2130] border border-[#232b3b] text-xs font-medium text-zinc-300 transition-all cursor-pointer active:scale-95"
           >
-            <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
             <span>Batch Rename</span>
           </button>
 
@@ -449,29 +518,49 @@ export default function App() {
           </button>
         </div>
 
+        {/* Center: Viewport Switcher */}
+        <div className="flex items-center space-x-1 bg-[#121620] border border-[#232b3b] p-0.5 rounded text-xs font-mono">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`px-3 py-1 rounded transition-all cursor-pointer ${
+              viewMode === 'grid' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            GRID
+          </button>
+          <button
+            onClick={() => setViewMode('split')}
+            className={`px-3 py-1 rounded transition-all cursor-pointer ${
+              viewMode === 'split' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            SPLIT (3D HUD)
+          </button>
+          <button
+            onClick={() => setViewMode('visualizer')}
+            className={`px-3 py-1 rounded transition-all cursor-pointer ${
+              viewMode === 'visualizer' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            FULL VISUALIZER
+          </button>
+        </div>
+
         {/* Right: Instant Search Bar */}
         <div className="flex items-center space-x-2">
-          <div className="relative w-72">
+          <div className="relative w-64">
             <input
               type="text"
-              placeholder="Search title, artist, album (FTS5)..."
+              placeholder="Search FTS5 database..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-8 pl-8 pr-7 bg-[#0e1117] border border-[#1e2533] focus:border-[#00f0ff] rounded text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none transition-colors font-mono"
             />
-            <svg
-              className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-2.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-2 text-zinc-500 hover:text-white cursor-pointer"
-              >
+              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-2 text-zinc-500 hover:text-white cursor-pointer">
                 ✕
               </button>
             )}
@@ -519,201 +608,250 @@ export default function App() {
         </div>
       )}
 
-      {/* ── MAIN WORKSPACE: GRID + INSPECTOR ───────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Virtualized Table Grid */}
-        <div className="flex-1 flex flex-col border-r border-[#1c222c] overflow-hidden">
-          {/* Grid Header Columns with Sort Triggers */}
-          <div className="h-9 bg-[#0e1117] border-b border-[#1c222c] flex items-center px-4 text-[11px] font-mono font-semibold text-zinc-400 uppercase tracking-wider select-none">
-            <div className="w-10">#</div>
+      {/* ── MAIN WORKSPACE VIEW ────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Split / Full Visualizer Viewport */}
+        {(viewMode === 'split' || viewMode === 'visualizer') && (
+          <div
+            className={`w-full ${
+              viewMode === 'visualizer' ? 'flex-1' : 'h-64'
+            } p-3 bg-[#08090a] transition-all duration-300 relative`}
+          >
+            <ResonanceVisualizer
+              audioElement={audioRef.current}
+              dynamicsMode={dynamicsMode}
+              className="w-full h-full shadow-2xl"
+            />
+          </div>
+        )}
 
-            <div
-              onClick={() => handleSort('title')}
-              className="flex-1 flex items-center space-x-1 cursor-pointer hover:text-[#00f0ff]"
-            >
-              <span>Title</span>
-              {sortBy === 'title' && (
-                <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>
-              )}
+        {/* Grid and Inspector Layout */}
+        {viewMode !== 'visualizer' && (
+          <div className="flex-1 flex overflow-hidden border-t border-[#1c222c]">
+            {/* Left: Virtualized Table Grid */}
+            <div className="flex-1 flex flex-col border-r border-[#1c222c] overflow-hidden">
+              {/* Header Columns */}
+              <div className="h-9 bg-[#0e1117] border-b border-[#1c222c] flex items-center px-4 text-[11px] font-mono font-semibold text-zinc-400 uppercase tracking-wider select-none">
+                <div className="w-10">#</div>
+                <div onClick={() => handleSort('title')} className="flex-1 flex items-center space-x-1 cursor-pointer hover:text-[#00f0ff]">
+                  <span>Title</span>
+                  {sortBy === 'title' && <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>}
+                </div>
+                <div onClick={() => handleSort('artist_name')} className="w-48 flex items-center space-x-1 cursor-pointer hover:text-[#00f0ff]">
+                  <span>Artist</span>
+                  {sortBy === 'artist_name' && <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>}
+                </div>
+                <div onClick={() => handleSort('album_name')} className="w-44 flex items-center space-x-1 cursor-pointer hover:text-[#00f0ff]">
+                  <span>Album</span>
+                  {sortBy === 'album_name' && <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>}
+                </div>
+                <div onClick={() => handleSort('genre')} className="w-28 flex items-center space-x-1 cursor-pointer hover:text-[#00f0ff]">
+                  <span>Genre</span>
+                  {sortBy === 'genre' && <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>}
+                </div>
+                <div onClick={() => handleSort('year')} className="w-16 flex items-center justify-center space-x-1 cursor-pointer hover:text-[#00f0ff]">
+                  <span>Year</span>
+                  {sortBy === 'year' && <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>}
+                </div>
+                <div onClick={() => handleSort('duration_ms')} className="w-16 flex items-center justify-end space-x-1 cursor-pointer hover:text-[#00f0ff]">
+                  <span>Time</span>
+                  {sortBy === 'duration_ms' && <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>}
+                </div>
+              </div>
+
+              {/* Virtualized Body */}
+              <div className="flex-1 overflow-hidden">
+                {tracks.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
+                    <div className="w-12 h-12 rounded-xl bg-[#121620] border border-[#232b3b] flex items-center justify-center text-[#00f0ff]">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                      </svg>
+                    </div>
+                    <h3 className="font-mono text-sm font-semibold text-zinc-300">NO AUDIO LOADED</h3>
+                    <p className="text-xs text-zinc-500 max-w-sm">
+                      Scan your music collection to feed high-resolution telemetry into the visual engine.
+                    </p>
+                  </div>
+                ) : (
+                  <List
+                    rowCount={tracks.length}
+                    rowHeight={40}
+                    style={{ height: listHeight }}
+                    rowProps={{
+                      tracks,
+                      selectedId,
+                      editingCell,
+                      editValue,
+                    }}
+                    rowComponent={renderRow}
+                  />
+                )}
+              </div>
             </div>
 
-            <div
-              onClick={() => handleSort('artist_name')}
-              className="w-48 flex items-center space-x-1 cursor-pointer hover:text-[#00f0ff]"
-            >
-              <span>Artist</span>
-              {sortBy === 'artist_name' && (
-                <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>
-              )}
-            </div>
+            {/* Right: Inspector */}
+            <div className="w-80 bg-[#0a0c10] flex flex-col overflow-y-auto">
+              <div className="h-9 px-4 bg-[#0e1117] border-b border-[#1c222c] flex items-center">
+                <span className="font-mono text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  // TELEMETRY INSPECTOR
+                </span>
+              </div>
 
-            <div
-              onClick={() => handleSort('album_name')}
-              className="w-44 flex items-center space-x-1 cursor-pointer hover:text-[#00f0ff]"
-            >
-              <span>Album</span>
-              {sortBy === 'album_name' && (
-                <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>
-              )}
-            </div>
+              {selectedTrack ? (
+                <div className="p-4 space-y-4">
+                  {/* Cover Art Box */}
+                  <div className="relative aspect-square w-full rounded-lg bg-[#121620] border border-[#232b3b] overflow-hidden flex items-center justify-center shadow-lg group">
+                    {isLoadingArt ? (
+                      <div className="text-xs font-mono text-zinc-500 animate-pulse">Loading art...</div>
+                    ) : coverArtUrl ? (
+                      <img src={coverArtUrl} alt={selectedTrack.album_name || 'Cover Art'} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-zinc-600 space-y-2">
+                        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                        <span className="font-mono text-[10px] uppercase">No embedded art</span>
+                      </div>
+                    )}
+                  </div>
 
-            <div
-              onClick={() => handleSort('genre')}
-              className="w-28 flex items-center space-x-1 cursor-pointer hover:text-[#00f0ff]"
-            >
-              <span>Genre</span>
-              {sortBy === 'genre' && (
-                <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>
-              )}
-            </div>
+                  {/* Primary Metadata */}
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white leading-tight">
+                      {selectedTrack.title || selectedTrack.file_name}
+                    </h4>
+                    <p className="text-xs text-[#00f0ff] font-medium">{selectedTrack.artist_name || 'Unknown Artist'}</p>
+                    <p className="text-xs text-zinc-400">{selectedTrack.album_name || 'Unknown Album'}</p>
+                  </div>
 
-            <div
-              onClick={() => handleSort('year')}
-              className="w-16 flex items-center justify-center space-x-1 cursor-pointer hover:text-[#00f0ff]"
-            >
-              <span>Year</span>
-              {sortBy === 'year' && (
-                <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>
-              )}
-            </div>
+                  <button
+                    onClick={() => playTrack(selectedTrack)}
+                    className="w-full py-2 bg-[#00f0ff] hover:bg-[#3bf3ff] text-black font-mono font-bold text-xs rounded transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center space-x-2"
+                  >
+                    <span>▶ ENGAGE AUDIO TELEMETRY</span>
+                  </button>
 
-            <div
-              onClick={() => handleSort('duration_ms')}
-              className="w-16 flex items-center justify-end space-x-1 cursor-pointer hover:text-[#00f0ff]"
-            >
-              <span>Time</span>
-              {sortBy === 'duration_ms' && (
-                <span className="text-[#00f0ff]">{sortDir === 'ASC' ? '▲' : '▼'}</span>
+                  {/* Data Attributes */}
+                  <div className="border-t border-[#1c222c] pt-3 space-y-2 font-mono text-xs">
+                    <div className="flex justify-between py-1 border-b border-[#141822]">
+                      <span className="text-zinc-500">FORMAT</span>
+                      <span className="text-zinc-300 uppercase">{selectedTrack.file_name.split('.').pop() || 'AUDIO'}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#141822]">
+                      <span className="text-zinc-500">DURATION</span>
+                      <span className="text-zinc-300">{formatTime(selectedTrack.duration_ms)}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#141822]">
+                      <span className="text-zinc-500">GENRE</span>
+                      <span className="text-zinc-300">{selectedTrack.genre || 'None'}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#141822]">
+                      <span className="text-zinc-500">YEAR</span>
+                      <span className="text-zinc-300">{selectedTrack.year || 'None'}</span>
+                    </div>
+                    <div className="flex flex-col py-1 space-y-1">
+                      <span className="text-zinc-500">FILE PATH</span>
+                      <span className="text-[10px] text-zinc-400 break-all bg-[#0e1117] p-1.5 rounded border border-[#1c222c]">
+                        {selectedTrack.file_path}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center text-zinc-600 space-y-2">
+                  <p className="text-xs font-mono">Select a track to inspect telemetry and engage audio playback</p>
+                </div>
               )}
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Virtualized Body */}
-          <div className="flex-1 overflow-hidden">
-            {tracks.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-[#121620] border border-[#232b3b] flex items-center justify-center text-[#00f0ff]">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                    />
-                  </svg>
-                </div>
-                <h3 className="font-mono text-sm font-semibold text-zinc-300">
-                  NO TRACKS INDEXED
-                </h3>
-                <p className="text-xs text-zinc-500 max-w-sm">
-                  Click <span className="text-[#00f0ff]">Scan Music Folder</span> to parse your MP3, WAV, and FLAC library with full ID3/Vorbis tags and cover art.
-                </p>
-              </div>
+      {/* ── MASTER TRANSPORT DECK ──────────────────────────────────────────── */}
+      <div className="h-16 bg-[#0a0c10] border-t border-[#1c222c] flex items-center justify-between px-6 z-20">
+        {/* Left: Track Info & Play/Pause */}
+        <div className="flex items-center space-x-4 w-72">
+          <button
+            onClick={togglePlayPause}
+            className="w-10 h-10 rounded-full bg-[#121620] hover:bg-[#1c2333] border border-[#232b3b] hover:border-[#00f0ff] flex items-center justify-center text-[#00f0ff] cursor-pointer transition-all shadow-md active:scale-95"
+          >
+            {isPlaying ? (
+              <span className="text-sm font-bold font-mono">❚❚</span>
             ) : (
-              <List
-                rowCount={tracks.length}
-                rowHeight={40}
-                style={{ height: gridHeight }}
-                rowProps={{
-                  tracks,
-                  selectedId,
-                  editingCell,
-                  editValue,
-                }}
-                rowComponent={renderRow}
-              />
+              <span className="text-sm font-bold font-mono">▶</span>
             )}
+          </button>
+
+          <div className="flex flex-col overflow-hidden">
+            <span className="text-xs font-bold text-white truncate">
+              {currentTrack ? currentTrack.title || currentTrack.file_name : 'No Track Engaged'}
+            </span>
+            <span className="text-[11px] text-zinc-400 truncate">
+              {currentTrack ? currentTrack.artist_name || 'Unknown Artist' : 'Ready'}
+            </span>
           </div>
         </div>
 
-        {/* Right: Inspector / Track Details Panel */}
-        <div className="w-80 bg-[#0a0c10] flex flex-col overflow-y-auto">
-          <div className="h-9 px-4 bg-[#0e1117] border-b border-[#1c222c] flex items-center">
-            <span className="font-mono text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-              // TRACK INSPECTOR
-            </span>
+        {/* Center: Timeline Scrubber */}
+        <div className="flex-1 max-w-xl flex items-center space-x-3 font-mono text-xs text-zinc-400">
+          <span>{formatTime(currentTime, true)}</span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            value={currentTime}
+            onChange={handleSeek}
+            className="flex-1 h-1 bg-[#1c222c] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
+          />
+          <span>{formatTime(duration, true)}</span>
+        </div>
+
+        {/* Right: Physics Mode Quick Select & Volume */}
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1 text-[10px] font-mono bg-[#121620] p-1 rounded border border-[#232b3b]">
+            <button
+              onClick={() => setDynamicsMode('ballistic')}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                dynamicsMode === 'ballistic' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              BALLISTIC
+            </button>
+            <button
+              onClick={() => setDynamicsMode('fluid')}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                dynamicsMode === 'fluid' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              FLUID
+            </button>
+            <button
+              onClick={() => setDynamicsMode('hybrid')}
+              className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                dynamicsMode === 'hybrid' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              HYBRID
+            </button>
           </div>
 
-          {selectedTrack ? (
-            <div className="p-4 space-y-5">
-              {/* Cover Art Box */}
-              <div className="relative aspect-square w-full rounded-lg bg-[#121620] border border-[#232b3b] overflow-hidden flex items-center justify-center shadow-lg group">
-                {isLoadingArt ? (
-                  <div className="text-xs font-mono text-zinc-500 animate-pulse">Loading art...</div>
-                ) : coverArtUrl ? (
-                  <img
-                    src={coverArtUrl}
-                    alt={selectedTrack.album_name || 'Cover Art'}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-zinc-600 space-y-2">
-                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1}
-                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                      />
-                    </svg>
-                    <span className="font-mono text-[10px] uppercase">No embedded art</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Primary Metadata */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-white leading-tight">
-                  {selectedTrack.title || selectedTrack.file_name}
-                </h4>
-                <p className="text-xs text-[#00f0ff] font-medium">
-                  {selectedTrack.artist_name || 'Unknown Artist'}
-                </p>
-                <p className="text-xs text-zinc-400">
-                  {selectedTrack.album_name || 'Unknown Album'}
-                </p>
-              </div>
-
-              {/* Data Grid Attributes */}
-              <div className="border-t border-[#1c222c] pt-4 space-y-2.5 font-mono text-xs">
-                <div className="flex justify-between py-1 border-b border-[#141822]">
-                  <span className="text-zinc-500">FORMAT</span>
-                  <span className="text-zinc-300 uppercase">
-                    {selectedTrack.file_name.split('.').pop() || 'AUDIO'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#141822]">
-                  <span className="text-zinc-500">DURATION</span>
-                  <span className="text-zinc-300">{formatTime(selectedTrack.duration_ms)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#141822]">
-                  <span className="text-zinc-500">GENRE</span>
-                  <span className="text-zinc-300">{selectedTrack.genre || 'None'}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#141822]">
-                  <span className="text-zinc-500">YEAR</span>
-                  <span className="text-zinc-300">{selectedTrack.year || 'None'}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#141822]">
-                  <span className="text-zinc-500">TRACK #</span>
-                  <span className="text-zinc-300">{selectedTrack.track_number || '1'}</span>
-                </div>
-                <div className="flex flex-col py-1 space-y-1">
-                  <span className="text-zinc-500">FILE PATH</span>
-                  <span className="text-[10px] text-zinc-400 break-all bg-[#0e1117] p-1.5 rounded border border-[#1c222c]">
-                    {selectedTrack.file_path}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center p-6 text-center text-zinc-600 space-y-2">
-              <svg className="w-8 h-8 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-xs font-mono">Select a track to inspect metadata & album artwork</p>
-            </div>
-          )}
+          <div className="flex items-center space-x-2">
+            <span className="font-mono text-xs text-zinc-500">VOL</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                setVolume(v);
+                if (audioRef.current) audioRef.current.volume = v;
+              }}
+              className="w-16 h-1 bg-[#1c222c] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
+            />
+          </div>
         </div>
       </div>
 

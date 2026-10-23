@@ -1,9 +1,23 @@
 // apps/desktop/src/main/main.ts
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { LibraryEngine } from 'library-core';
 import type { SortField, SortDir } from 'library-core';
+
+// Register media protocol privileges before app ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'media',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      bypassCSP: true,
+    },
+  },
+]);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -99,6 +113,15 @@ function registerHandlers(): void {
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  protocol.handle('media', (request) => {
+    const url = new URL(request.url);
+    let filePath = decodeURIComponent(url.pathname);
+    if (process.platform === 'win32' && filePath.startsWith('/')) {
+      filePath = filePath.slice(1);
+    }
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+
   const dbPath = path.join(app.getPath('userData'), 'resonance_library.db');
   library = new LibraryEngine(dbPath);
 
