@@ -27,6 +27,7 @@ export interface Track {
   has_lyrics: number;
   is_instrumental: number;
   lyrics_json: string | null;
+  waveform_peaks?: string | null;
   date_added: number;
   date_modified: number;
 }
@@ -90,6 +91,9 @@ export class LibraryEngine {
     }
     if (!columns.includes('lyrics_json')) {
       this.db.exec('ALTER TABLE tracks ADD COLUMN lyrics_json TEXT;');
+    }
+    if (!columns.includes('waveform_peaks')) {
+      this.db.exec('ALTER TABLE tracks ADD COLUMN waveform_peaks TEXT;');
     }
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_has_lyrics ON tracks(has_lyrics);');
   }
@@ -299,6 +303,24 @@ export class LibraryEngine {
 
     try {
       return JSON.parse(row.lyrics_json) as WordTimestamp[];
+    } catch {
+      return null;
+    }
+  }
+
+  saveWaveform(trackId: number, peaks: number[]): void {
+    const stmt = this.db.prepare(
+      "UPDATE tracks SET waveform_peaks = ?, date_modified = strftime('%s', 'now') WHERE id = ?"
+    );
+    stmt.run(JSON.stringify(peaks), trackId);
+  }
+
+  getWaveform(trackId: number): number[] | null {
+    const stmt = this.db.prepare('SELECT waveform_peaks FROM tracks WHERE id = ?');
+    const row = stmt.get(trackId) as { waveform_peaks: string | null } | undefined;
+    if (!row || !row.waveform_peaks) return null;
+    try {
+      return JSON.parse(row.waveform_peaks) as number[];
     } catch {
       return null;
     }

@@ -1,6 +1,7 @@
-// apps/desktop/src/renderer/components/cockpit/TransportDeck.tsx
-import React from 'react';
-import { useResonanceStore } from '../../store/useResonanceStore.js';
+// apps/desktop/src/renderer/components/cockpit/TransportDeck/index.tsx
+import React, { useMemo } from 'react';
+import { useResonanceStore } from '../../../store/useResonanceStore.js';
+import { WaveformPreview } from './components/WaveformPreview.js';
 
 export interface TransportDeckProps {
   onTogglePlay?: () => void;
@@ -22,6 +23,19 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
   const seekTo = useResonanceStore((s) => s.seekTo);
   const bands = useResonanceStore((s) => s.bands);
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
+
+  // Parse cached waveform peaks if present on selectedTrack
+  const parsedPeaks = useMemo<number[] | null>(() => {
+    if (!selectedTrack?.waveform_peaks) return null;
+    try {
+      if (Array.isArray(selectedTrack.waveform_peaks)) {
+        return selectedTrack.waveform_peaks as number[];
+      }
+      return JSON.parse(selectedTrack.waveform_peaks);
+    } catch {
+      return null;
+    }
+  }, [selectedTrack?.waveform_peaks]);
 
   const formatSeconds = (sec: number) => {
     if (isNaN(sec) || sec <= 0) return '0:00';
@@ -62,20 +76,25 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
         </div>
       </div>
 
-      {/* Center: Timeline Scrubber */}
+      {/* Center: Timeline Scrubber with Embedded Waveform Preview */}
       <div className="flex-1 max-w-2xl flex items-center space-x-3 text-xs text-zinc-400 px-4">
         <span className="w-10 text-right">{formatSeconds(currentTime)}</span>
-        <input
-          type="range"
-          min={0}
-          max={duration || 100}
-          step={0.1}
-          value={currentTime}
-          onChange={handleSliderChange}
-          onMouseDown={() => setScrubbing(true)}
-          onMouseUp={() => setScrubbing(false)}
-          className="flex-1 h-1 bg-[#1c222c] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
-        />
+        <div className="relative flex-1 flex items-center h-10">
+          {/* Cybernetic Waveform Preview Track Behind Slider */}
+          <WaveformPreview peaks={parsedPeaks} currentTime={currentTime} duration={duration} />
+
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.1}
+            value={currentTime}
+            onChange={handleSliderChange}
+            onMouseDown={() => setScrubbing(true)}
+            onMouseUp={() => setScrubbing(false)}
+            className="w-full h-2 bg-transparent appearance-none cursor-pointer accent-[#00f0ff] z-10 focus:outline-none"
+          />
+        </div>
         <span className="w-10">{formatSeconds(duration)}</span>
       </div>
 

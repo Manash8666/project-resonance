@@ -13,6 +13,7 @@ export interface Track {
   has_lyrics: number;
   is_instrumental: number;
   lyrics_json?: string | null;
+  waveform_peaks?: string | null;
   cover_art_mime?: string | null;
   date_added: number;
   date_modified: number;

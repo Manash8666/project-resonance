@@ -1,16 +1,18 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import { HeaderBar } from './components/cockpit/HeaderBar.js';
-import { VaultPane } from './components/cockpit/VaultPane.js';
-import { ForgeViewport } from './components/cockpit/ForgeViewport.js';
-import { InspectorRack } from './components/cockpit/InspectorRack.js';
-import { TransportDeck } from './components/cockpit/TransportDeck.js';
+import {
+  HeaderBar,
+  VaultPane,
+  ForgeViewport,
+  InspectorRack,
+  TransportDeck,
+} from './components/cockpit/index.js';
 import { ExportModal } from './components/ExportModal.js';
 import { useResonanceStore } from './store/useResonanceStore.js';
+import { audioEngine } from './audio/AudioEngine.js';
 import type { Track } from './types/track.js';
 
 export default function App() {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Zustand Store Selectors
   const setTracks = useResonanceStore((s) => s.setTracks);
@@ -87,53 +89,61 @@ export default function App() {
         setActiveLyrics(lyrics as any);
       })
       .catch(() => setActiveLyrics(null));
-  }, [selectedTrack?.id, setActiveLyrics]);
 
-  // Playback control
+    // 3. Fetch or compute waveform peaks preview
+    if (!selectedTrack.waveform_peaks) {
+      window.resonance
+        .getWaveform(selectedTrack.id)
+        .then(async (peaks) => {
+          if (peaks && peaks.length > 0) {
+            setSelectedTrack({ ...selectedTrack, waveform_peaks: JSON.stringify(peaks) });
+          } else {
+            try {
+              const formattedUrl = `media:///${encodeURIComponent(selectedTrack.file_path)}`;
+              const resp = await fetch(formattedUrl);
+              const arrayBuf = await resp.arrayBuffer();
+              const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+              const tempCtx = new AudioCtx();
+              const audioBuf = await tempCtx.decodeAudioData(arrayBuf);
+              const channel = audioBuf.getChannelData(0);
+              const numSamples = 160;
+              const blockSize = Math.floor(channel.length / numSamples);
+              const generatedPeaks: number[] = [];
+              for (let i = 0; i < numSamples; i++) {
+                let max = 0;
+                const start = i * blockSize;
+                for (let j = 0; j < blockSize; j += 8) {
+                  const val = Math.abs(channel[start + j]);
+                  if (val > max) max = val;
+                }
+                generatedPeaks.push(parseFloat(Math.max(0.06, Math.min(1.0, max)).toFixed(3)));
+              }
+              tempCtx.close();
+              await window.resonance.saveWaveform(selectedTrack.id, generatedPeaks);
+              setSelectedTrack({ ...selectedTrack, waveform_peaks: JSON.stringify(generatedPeaks) });
+            } catch (err) {
+              console.error('Waveform generation error:', err);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [selectedTrack?.id, setActiveLyrics, setSelectedTrack]);
+
+  // Playback control via singleton AudioEngine
   const playTrack = (track: Track) => {
     setSelectedTrack(track);
     setSelectedTrackId(track.id);
-    if (!audioRef.current) return;
-
-    // Route via privileged media:// protocol
-    audioRef.current.src = `media:///${encodeURIComponent(track.file_path)}`;
-    audioRef.current.volume = volume;
-    audioRef.current
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch((err) => console.error('Audio play error:', err));
+    audioEngine.loadTrack(track.file_path);
+    audioEngine.play();
   };
 
   const togglePlayPause = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch((err) => console.error('Play error:', err));
-    }
-  };
-
-  // Audio element time tracking — respects the isScrubbing flag!
-  const handleTimeUpdate = () => {
-    if (!audioRef.current) return;
-    if (!isScrubbing) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (!audioRef.current) return;
-    setDuration(audioRef.current.duration);
+    audioEngine.toggle();
   };
 
   const handleSeek = (newTimeSec: number) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = newTimeSec;
-    setCurrentTime(newTimeSec);
+    audioEngine.seek(newTimeSec);
   };
 
   // Auto-transcribe vocals with Whisper ONNX
@@ -180,7 +190,7 @@ export default function App() {
 
         {/* Center: The Forge (3D GPU Viewport) */}
         <Panel minSize="30%" id="forge-panel">
-          <ForgeViewport audioElement={audioRef.current} coverArtUrl={coverArtUrl} />
+          <ForgeViewport audioElement={audioEngine.getAudioElement()} coverArtUrl={coverArtUrl} />
         </Panel>
 
         {/* Resizer Handle 2 */}
@@ -204,17 +214,8 @@ export default function App() {
         onTogglePlay={togglePlayPause}
         onSeek={handleSeek}
         onVolumeChange={(vol) => {
-          if (audioRef.current) audioRef.current.volume = vol;
+          audioEngine.setVolume(vol);
         }}
-      />
-
-      {/* Hidden Master Audio Element */}
-      <audio
-        ref={audioRef}
-        crossOrigin="anonymous"
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
       />
 
       {/* 4. 4K / 60FPS Video Export Modal */}

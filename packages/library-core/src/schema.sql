@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS tracks (
     has_lyrics INTEGER DEFAULT 0,
     is_instrumental INTEGER DEFAULT 0,
     lyrics_json TEXT,
+    waveform_peaks TEXT,
     date_added INTEGER DEFAULT (strftime('%s', 'now')),
     date_modified INTEGER DEFAULT (strftime('%s', 'now'))
 );

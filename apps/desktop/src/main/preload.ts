@@ -91,6 +91,22 @@ const resonanceAPI = {
 
   getLyrics: (trackId: number): Promise<WordTimestamp[] | null> =>
     ipcRenderer.invoke('library:getLyrics', trackId),
+
+  saveWaveform: (trackId: number, peaks: number[]): Promise<boolean> =>
+    ipcRenderer.invoke('library:saveWaveform', trackId, peaks),
+
+  getWaveform: (trackId: number): Promise<number[] | null> =>
+    ipcRenderer.invoke('library:getWaveform', trackId),
+
+  // Configuration Persistence
+  getConfig: (key: string): Promise<any> =>
+    ipcRenderer.invoke('config:get', key),
+
+  setConfig: (key: string, value: any): Promise<boolean> =>
+    ipcRenderer.invoke('config:set', key, value),
+
+  removeConfig: (key: string): Promise<boolean> =>
+    ipcRenderer.invoke('config:remove', key),
 } as const;
 
 contextBridge.exposeInMainWorld('resonance', resonanceAPI);

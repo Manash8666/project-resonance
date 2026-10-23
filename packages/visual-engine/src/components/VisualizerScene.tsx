@@ -95,7 +95,7 @@ const BackgroundArtQuad: React.FC<{ url: string | null }> = ({ url }) => {
   return (
     <mesh position={[0, 0, -4.5]}>
       <planeGeometry args={[16, 9]} />
-      <meshBasicMaterial map={texture} transparent opacity={0.35} />
+      <meshBasicMaterial map={texture as any} transparent opacity={0.35} />
     </mesh>
   );
 };

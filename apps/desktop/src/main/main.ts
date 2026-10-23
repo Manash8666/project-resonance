@@ -1,6 +1,7 @@
 // apps/desktop/src/main/main.ts
 import { app, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { LibraryEngine } from 'library-core';
 import type { SortField, SortDir } from 'library-core';
@@ -190,6 +191,56 @@ function registerHandlers(): void {
 
   ipcMain.handle('library:getLyrics', async (_event, trackId: number) => {
     return library.getLyricsForTrack(trackId);
+  });
+
+  ipcMain.handle('library:saveWaveform', async (_event, trackId: number, peaks: number[]) => {
+    library.saveWaveform(trackId, peaks);
+    return true;
+  });
+
+  ipcMain.handle('library:getWaveform', async (_event, trackId: number) => {
+    return library.getWaveform(trackId);
+  });
+
+  // ─── Hardware Configuration Persistence ────────────────────────────────────
+  const configPath = path.join(app.getPath('userData'), 'resonance_config.json');
+
+  const readConfigFile = (): Record<string, any> => {
+    try {
+      if (fs.existsSync(configPath)) {
+        return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      }
+    } catch {
+      // Fallback
+    }
+    return {};
+  };
+
+  const writeConfigFile = (cfg: Record<string, any>): void => {
+    try {
+      fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('Failed to write config file:', err);
+    }
+  };
+
+  ipcMain.handle('config:get', async (_event, key: string) => {
+    const cfg = readConfigFile();
+    return cfg[key] ?? null;
+  });
+
+  ipcMain.handle('config:set', async (_event, key: string, value: any) => {
+    const cfg = readConfigFile();
+    cfg[key] = value;
+    writeConfigFile(cfg);
+    return true;
+  });
+
+  ipcMain.handle('config:remove', async (_event, key: string) => {
+    const cfg = readConfigFile();
+    delete cfg[key];
+    writeConfigFile(cfg);
+    return true;
   });
 }
 
