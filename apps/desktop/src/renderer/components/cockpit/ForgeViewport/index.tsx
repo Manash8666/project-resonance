@@ -168,7 +168,7 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
             setIsImmersive(false);
           }}
           className={`absolute top-4 right-4 z-50 px-3 py-1.5 bg-[#080c14]/90 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/40 hover:border-[#00f0ff] rounded-md text-[11px] font-mono text-zinc-200 hover:text-[#00f0ff] transition-all duration-300 cursor-pointer backdrop-blur-md shadow-[0_0_15px_rgba(0,240,255,0.2)] flex items-center space-x-2 ${
-            isHudVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
+            isHudVisible ? 'opacity-90' : 'opacity-35 hover:opacity-100'
           }`}
           title="Return to DAW Cockpit (Press 'ESC' or 'F')"
         >
