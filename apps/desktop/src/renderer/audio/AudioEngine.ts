@@ -38,7 +38,6 @@ export class AudioEngine {
 
     // 1. Create native audio element
     this.audioElement = new Audio();
-    this.audioElement.crossOrigin = 'anonymous';
 
     // 2. Prepare 2048-bin frequency arrays
     const bufferLength = finalConfig.fftSize / 2; // 2048 bins
@@ -80,8 +79,9 @@ export class AudioEngine {
           const nextTrack = tracks[currentIndex + 1];
           state.setSelectedTrackId(nextTrack.id);
           state.setSelectedTrack(nextTrack);
-          this.loadTrack(nextTrack.file_path);
-          void this.play();
+          void this.loadTrack(nextTrack.file_path).then(() => {
+            void this.play();
+          });
         }
       }
     });
@@ -129,12 +129,30 @@ export class AudioEngine {
   }
 
   /**
-   * Loads a track by file path using the privileged media:// protocol.
+   * Loads a track by file path using the strictly formatted file:/// protocol.
    */
-  public loadTrack(filePath: string): void {
-    const formattedUrl = `media:///${encodeURIComponent(filePath)}`;
-    this.audioElement.src = formattedUrl;
+  public async loadTrack(filePath: string): Promise<void> {
+    // 1. Convert Windows backslashes to forward slashes
+    const formattedPath = filePath.replace(/\\/g, '/');
+    
+    // 2. Construct a valid file:/// URL (Three slashes for drive letters e.g. file:///E:/...)
+    const fileUrl = formattedPath.startsWith('/')
+      ? `file://${formattedPath}`
+      : `file:///${formattedPath}`;
+
+    console.log("Loading Audio Source:", fileUrl); // Diagnostic log
+    
+    this.audioElement.src = fileUrl;
     this.audioElement.load();
+    
+    // Wait for metadata to ensure the file is actually readable
+    await new Promise<void>((resolve, reject) => {
+      this.audioElement.addEventListener('loadedmetadata', () => resolve(), { once: true });
+      this.audioElement.addEventListener('error', (e) => {
+        console.error("Audio element error on URL:", fileUrl, e);
+        reject(new Error("Media element error"));
+      }, { once: true });
+    });
   }
 
   /**

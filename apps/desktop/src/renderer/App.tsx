@@ -81,11 +81,15 @@ const App: React.FC = () => {
   };
 
   // ── Dependency Injection: Handlers injected downward from Composition Root ──
-  const handlePlayTrack = (track: Track) => {
+  const handlePlayTrack = async (track: Track) => {
     setSelectedTrackId(track.id);
     setSelectedTrack(track);
-    audioEngine.loadTrack(track.file_path);
-    void audioEngine.play();
+    try {
+      await audioEngine.loadTrack(track.file_path);
+      await audioEngine.play();
+    } catch (err) {
+      console.error('Playback initiation error:', err);
+    }
   };
 
   const handleTogglePlay = () => {
