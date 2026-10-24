@@ -27,6 +27,10 @@ const App: React.FC = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        if (!window.resonance?.getTracks) {
+          console.warn('[Resonance] window.resonance bridge is not ready');
+          return;
+        }
         // Load initial tracks from the SQLite backend on startup
         const result = await window.resonance.getTracks(1000, 0);
         if (Array.isArray(result)) {
@@ -43,7 +47,7 @@ const App: React.FC = () => {
 
     void initializeApp();
 
-    const cleanupTeardown = window.resonance.onTeardown?.(() => {
+    const cleanupTeardown = window.resonance?.onTeardown?.(() => {
       audioEngine.destroy();
     });
 

@@ -51,7 +51,23 @@ function getRendererPath(): string {
   return candidates[0];
 }
 
+function getPreloadPath(): string {
+  const candidates = [
+    path.join(__dirname, 'preload.cjs'),
+    path.join(__dirname, 'preload.js'),
+    path.join(app.getAppPath(), 'dist/main/preload.cjs'),
+    path.join(app.getAppPath(), 'dist/main/preload.js'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
+
 function createWindow(): void {
+  const preloadPath = getPreloadPath();
+  console.log('[Resonance] Loading preload script from:', preloadPath);
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -61,10 +77,10 @@ function createWindow(): void {
     titleBarStyle: 'hidden',
     frame: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
     },
   });
 
@@ -166,10 +182,10 @@ function registerHandlers(): void {
       height: settings.height,
       webPreferences: {
         offscreen: true,
-        preload: path.join(__dirname, 'preload.js'),
+        preload: getPreloadPath(),
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: true,
+        sandbox: false,
       },
     });
 
