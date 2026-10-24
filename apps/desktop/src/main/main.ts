@@ -7,6 +7,12 @@ import type { SortField, SortDir } from 'library-core';
 import { VideoAssembler, RenderSettings } from './workers/videoAssembler.js';
 import { TranscriptionEngine } from 'ai-transcriber';
 
+// Hardware Accelerated WebGL & GPU Flags
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('enable-webgl');
+
 // Register media protocol privileges before app ready
 protocol.registerSchemesAsPrivileged([
   {

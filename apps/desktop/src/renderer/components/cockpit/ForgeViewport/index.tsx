@@ -19,6 +19,14 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
   const [internalCoverArt, setInternalCoverArt] = useState<string | null>(null);
 
+  // Fresh Mount Guard for WebGL Context
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
   // Immersive Mode State
   const isImmersive = useResonanceStore((s) => s.isImmersive);
   const setIsImmersive = useResonanceStore((s) => s.setIsImmersive);
@@ -108,6 +116,10 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
     if (!activeLyrics || activeLyrics.length === 0) return null;
     return activeLyrics.find((w) => currentTime >= w.start && currentTime <= w.end) || null;
   }, [activeLyrics, currentTime]);
+
+  if (!mounted) {
+    return <div className="w-full h-full bg-[#05070a] flex items-center justify-center" />;
+  }
 
   return (
     <div

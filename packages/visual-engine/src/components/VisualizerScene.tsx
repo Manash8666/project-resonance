@@ -116,6 +116,17 @@ export const VisualizerScene: React.FC<VisualizerSceneProps> = ({
   albumArtUrl = null,
   className = 'w-full h-full',
 }) => {
+  // Fresh Mount & Recreation Guard
+  const [mounted, setMounted] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => {
+      setMounted(false);
+    };
+  }, []);
+
   // If dataTexture is provided externally, skip creating internal AudioContext
   const hasExternalTexture = Boolean(dataTexture);
   const internalTelemetry = useAudioTelemetry(hasExternalTexture ? null : audioElement);
@@ -129,11 +140,31 @@ export const VisualizerScene: React.FC<VisualizerSceneProps> = ({
     : internalTelemetry.bandsRef;
   const isReady = hasExternalTexture || internalTelemetry.isReady;
 
+  if (!mounted) {
+    return (
+      <div className={`relative ${className} bg-[#040507] overflow-hidden flex items-center justify-center`}>
+        <div className="w-2.5 h-2.5 rounded-full bg-[#00f0ff] animate-ping" />
+      </div>
+    );
+  }
+
   return (
     <div className={`relative ${className} bg-[#060709] overflow-hidden rounded-lg border border-[#1c222c]`}>
       <Canvas
+        key={`resonance-r3f-canvas-${canvasKey}`}
         camera={{ position: [0, 1.6, 4.8], fov: 50 }}
-        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+        gl={{
+          antialias: true,
+          alpha: false,
+          powerPreference: 'high-performance',
+          preserveDrawingBuffer: false,
+          failIfMajorPerformanceCaveat: false,
+        }}
+        style={{ width: '100%', height: '100%' }}
+        onCreated={({ gl }) => {
+          gl.setClearColor('#040507');
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <color attach="background" args={['#040507']} />
 
@@ -160,3 +191,4 @@ export const VisualizerScene: React.FC<VisualizerSceneProps> = ({
     </div>
   );
 };
+
