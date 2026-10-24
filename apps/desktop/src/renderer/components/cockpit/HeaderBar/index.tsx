@@ -16,6 +16,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
   const setSearchQuery = useResonanceStore((s) => s.setSearchQuery);
   const setExportModalOpen = useResonanceStore((s) => s.setExportModalOpen);
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
+  const autoImmersiveEnabled = useResonanceStore((s) => s.autoImmersiveEnabled);
+  const setAutoImmersiveEnabled = useResonanceStore((s) => s.setAutoImmersiveEnabled);
+  const setIsImmersive = useResonanceStore((s) => s.setIsImmersive);
 
   const [scanStatus, setScanStatus] = useState<string | null>(null);
 
@@ -98,6 +101,39 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
             {scanStatus}
           </span>
         )}
+
+        {/* Auto-Immersive Inactivity Toggle */}
+        <button
+          onClick={() => setAutoImmersiveEnabled(!autoImmersiveEnabled)}
+          className={`px-2.5 py-1.5 border rounded text-xs transition-all flex items-center space-x-1.5 cursor-pointer ${
+            autoImmersiveEnabled
+              ? 'bg-[#00f0ff]/10 border-[#00f0ff]/40 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.15)]'
+              : 'bg-[#121620] border-[#232b3b] text-zinc-400 hover:text-zinc-200'
+          }`}
+          title="Toggle Auto-Immersive Mode on idle playback (4s inactivity timeout)"
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              autoImmersiveEnabled ? 'bg-[#00f0ff] animate-pulse shadow-[0_0_6px_#00f0ff]' : 'bg-zinc-600'
+            }`}
+          />
+          <span className="text-[10px] tracking-wider font-mono">
+            {autoImmersiveEnabled ? 'AUTO: ON' : 'AUTO: OFF'}
+          </span>
+        </button>
+
+        {/* Immersive Mode Trigger */}
+        <button
+          onClick={() => setIsImmersive(true)}
+          className="px-2.5 py-1.5 bg-[#121620] hover:bg-[#1a2130] border border-[#232b3b] hover:border-[#00f0ff]/60 text-xs text-zinc-200 hover:text-white rounded transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm group"
+          title="Enter Immersive Mode (Hotkey: F or double-click visualizer)"
+        >
+          <span className="text-[#00f0ff] group-hover:scale-110 transition-transform">⛶</span>
+          <span className="text-[10px] tracking-wider font-mono">IMMERSIVE</span>
+          <kbd className="px-1 py-0.2 text-[8px] bg-black/40 border border-zinc-700/80 rounded text-zinc-400">
+            F
+          </kbd>
+        </button>
 
         <button
           onClick={handleScanFolder}

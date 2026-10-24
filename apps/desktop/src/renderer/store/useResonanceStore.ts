@@ -36,10 +36,15 @@ export interface ForgeState {
     wireframe: boolean;
   };
   isExportModalOpen: boolean;
+  isImmersive: boolean;
+  autoImmersiveEnabled: boolean;
   setBackgroundImageUrl: (url: string | null) => void;
   setDynamicsMode: (mode: 'ballistic' | 'fluid' | 'hybrid') => void;
   updateShaderParam: (key: string, value: number | boolean) => void;
   setExportModalOpen: (open: boolean) => void;
+  setIsImmersive: (isImmersive: boolean) => void;
+  setAutoImmersiveEnabled: (enabled: boolean) => void;
+  toggleImmersive: () => void;
 }
 
 // --- SLICE C: THE TELEMETRY (Isolated 60fps Real-Time Audio) ---
@@ -113,6 +118,8 @@ export const useResonanceStore = create<ResonanceStore>()(
         wireframe: false,
       },
       isExportModalOpen: false,
+      isImmersive: false,
+      autoImmersiveEnabled: true,
       setBackgroundImageUrl: (backgroundImageUrl) => set({ backgroundImageUrl }),
       setDynamicsMode: (dynamicsMode) => set({ dynamicsMode }),
       updateShaderParam: (key, value) =>
@@ -120,6 +127,9 @@ export const useResonanceStore = create<ResonanceStore>()(
           shaderParams: { ...state.shaderParams, [key]: value },
         })),
       setExportModalOpen: (isExportModalOpen) => set({ isExportModalOpen }),
+      setIsImmersive: (isImmersive) => set({ isImmersive }),
+      setAutoImmersiveEnabled: (autoImmersiveEnabled) => set({ autoImmersiveEnabled }),
+      toggleImmersive: () => set((state) => ({ isImmersive: !state.isImmersive })),
 
       // Telemetry Initializers
       currentTime: 0,

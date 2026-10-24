@@ -1,10 +1,11 @@
 // apps/desktop/src/renderer/components/cockpit/ForgeViewport/index.tsx
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { VisualizerScene } from 'visual-engine';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 import { audioEngine } from '../../../audio/AudioEngine.js';
 import { TelemetryHUD } from './components/TelemetryHUD.js';
 import { KineticOverlay } from './components/KineticOverlay.js';
+import { ImmersiveHUD } from './components/ImmersiveHUD.js';
 
 export interface ForgeViewportProps {
   audioElement?: HTMLAudioElement | null;
@@ -16,9 +17,18 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
   coverArtUrl = null,
 }) => {
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
-  const [internalCoverArt, setInternalCoverArt] = React.useState<string | null>(null);
+  const [internalCoverArt, setInternalCoverArt] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  // Immersive Mode State
+  const isImmersive = useResonanceStore((s) => s.isImmersive);
+  const setIsImmersive = useResonanceStore((s) => s.setIsImmersive);
+  const toggleImmersive = useResonanceStore((s) => s.toggleImmersive);
+
+  // Inactivity & Cursor Hiding in Immersive Mode
+  const [isHudVisible, setIsHudVisible] = useState(true);
+  const [isCursorHidden, setIsCursorHidden] = useState(false);
+
+  useEffect(() => {
     if (coverArtUrl) {
       setInternalCoverArt(coverArtUrl);
       return;
@@ -32,6 +42,62 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
       .catch(() => setInternalCoverArt(null));
   }, [coverArtUrl, selectedTrack?.id]);
 
+  // Handle Mouse Inactivity in Immersive Mode
+  useEffect(() => {
+    if (!isImmersive) {
+      setIsHudVisible(true);
+      setIsCursorHidden(false);
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    const handleActivity = () => {
+      setIsHudVisible(true);
+      setIsCursorHidden(false);
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setIsHudVisible(false);
+        setIsCursorHidden(true);
+      }, 3500); // 3.5 seconds of inactivity hides HUD and cursor
+    };
+
+    // Initial wake on entering immersive mode
+    handleActivity();
+
+    window.addEventListener('mousemove', handleActivity, { passive: true });
+    window.addEventListener('mousedown', handleActivity, { passive: true });
+    window.addEventListener('touchstart', handleActivity, { passive: true });
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('mousedown', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+    };
+  }, [isImmersive]);
+
+  // Global Keyboard Shortcuts (Escape to exit, F to toggle)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+      }
+
+      if (e.key === 'Escape' && isImmersive) {
+        e.preventDefault();
+        setIsImmersive(false);
+      } else if (e.code === 'KeyF') {
+        e.preventDefault();
+        toggleImmersive();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isImmersive, setIsImmersive, toggleImmersive]);
+
   const effectiveAudioElement = audioElement ?? audioEngine.getAudioElement();
   const bands = useResonanceStore((s) => s.bands);
   const currentTime = useResonanceStore((s) => s.currentTime);
@@ -44,21 +110,52 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
   }, [activeLyrics, currentTime]);
 
   return (
-    <div className="w-full h-full bg-[#05070a] flex items-center justify-center relative overflow-hidden select-none">
-      {/* 3D WebGL Canvas Scene */}
+    <div
+      onDoubleClick={toggleImmersive}
+      className={`w-full h-full bg-[#05070a] flex items-center justify-center select-none ${
+        isImmersive
+          ? 'fixed inset-0 z-40'
+          : 'relative overflow-hidden'
+      } ${isImmersive && isCursorHidden ? 'cursor-none' : 'cursor-default'}`}
+    >
+      {/* 3D WebGL Canvas Scene (Persistent Canvas: Zero Remounts) */}
       <div className="absolute inset-0">
         <VisualizerScene
           audioElement={effectiveAudioElement}
-          dataTexture={audioEngine.getDataTexture()}
+          dataTexture={audioEngine.getDataTexture() as any}
           albumArtUrl={internalCoverArt}
         />
       </div>
 
-      {/* Cybernetic Telemetry HUD Overlay (Top-Left) */}
-      <TelemetryHUD bass={bands.bass} mid={bands.mid} treble={bands.treble} />
+      {/* Cybernetic Telemetry HUD Overlay (Top-Left, Hidden in Immersive Mode) */}
+      {!isImmersive && (
+        <TelemetryHUD bass={bands.bass} mid={bands.mid} treble={bands.treble} />
+      )}
 
-      {/* Kinetic Typography Manifestation (Center) */}
+      {/* Quick Immersive Toggle Action (Top-Right, Hidden in Immersive Mode) */}
+      {!isImmersive && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsImmersive(true);
+          }}
+          className="absolute top-4 right-4 z-20 px-2.5 py-1.5 bg-[#080c14]/75 hover:bg-[#00f0ff]/20 border border-[#1e2533] hover:border-[#00f0ff]/60 rounded-md text-[11px] font-mono text-zinc-400 hover:text-[#00f0ff] transition-all cursor-pointer backdrop-blur-sm shadow-md flex items-center space-x-1.5 group"
+          title="Enter Immersive Mode (Double-click or press 'F')"
+        >
+          <span className="text-xs group-hover:scale-110 transition-transform">⛶</span>
+          <span className="text-[10px] tracking-wider font-semibold">IMMERSIVE</span>
+        </button>
+      )}
+
+      {/* Kinetic Typography Manifestation (Center: Always Active in Sync) */}
       <KineticOverlay activeWord={activeWord} />
+
+      {/* Minimal Floating Cybernetic HUD (Visible only in Immersive Mode during activity) */}
+      <ImmersiveHUD
+        isVisible={isImmersive && isHudVisible}
+        onExit={() => setIsImmersive(false)}
+      />
     </div>
   );
 };
+
