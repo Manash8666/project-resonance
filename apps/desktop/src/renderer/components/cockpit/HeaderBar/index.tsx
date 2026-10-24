@@ -38,6 +38,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
   const autoImmersiveEnabled = useResonanceStore((s) => s.autoImmersiveEnabled);
   const setAutoImmersiveEnabled = useResonanceStore((s) => s.setAutoImmersiveEnabled);
+  const isImmersive = useResonanceStore((s) => s.isImmersive);
   const setIsImmersive = useResonanceStore((s) => s.setIsImmersive);
   const isPlaying = useResonanceStore((s) => s.isPlaying);
   const currentTime = useResonanceStore((s) => s.currentTime);
@@ -151,7 +152,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       <div
         onDoubleClick={() => window.resonance?.maximizeWindow?.()}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-        className="h-8 border-b border-[#18181b] flex items-center justify-between pl-3 pr-0 overflow-hidden"
+        className="h-8 border-b border-[#18181b] flex items-center justify-between pl-3 pr-0 relative z-30"
       >
         {/* Brand Logo & Menus */}
         <div className="flex items-center gap-3 shrink-0">
@@ -165,7 +166,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           {/* Menus (No-drag) */}
           <div
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            className="hidden sm:flex items-center gap-0.5 text-[11px] text-zinc-400 ml-1"
+            className="hidden sm:flex items-center gap-0.5 text-[11px] text-zinc-400 ml-1 relative"
           >
             {['File', 'Edit', 'Tools', 'View', 'Audio', 'Help'].map((item) => (
               <button
@@ -178,6 +179,136 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 {item}
               </button>
             ))}
+
+            {/* Floating Menu Popover */}
+            {activeMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setActiveMenu(null)}
+                />
+                <div className="absolute top-7 left-0 z-50 min-w-48 bg-[#09090c] border border-[#27272a] rounded-sm py-1 shadow-2xl panel-recessed font-mono text-[10px]">
+                  {activeMenu === 'File' && (
+                    <>
+                      <button
+                        onClick={() => { setActiveMenu(null); handleScanFolder(); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Scan Music Library</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">Ctrl+O</span>
+                      </button>
+                      <button
+                        onClick={() => { setActiveMenu(null); setExportModalOpen(true); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Export Video Project</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">Ctrl+E</span>
+                      </button>
+                      <div className="h-px bg-[#1f1f24] my-1" />
+                      <button
+                        onClick={() => { setActiveMenu(null); window.resonance?.closeWindow?.(); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-red-950/40 text-red-400 hover:text-red-300 flex justify-between cursor-pointer"
+                      >
+                        <span>Exit Project Resonance</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">Alt+F4</span>
+                      </button>
+                    </>
+                  )}
+                  {activeMenu === 'Edit' && (
+                    <>
+                      <button
+                        onClick={() => { setActiveMenu(null); useResonanceStore.getState().setTimelineTool('select'); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Selection Pointer</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">V</span>
+                      </button>
+                      <button
+                        onClick={() => { setActiveMenu(null); useResonanceStore.getState().setTimelineTool('split'); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Split Razor Tool</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">C</span>
+                      </button>
+                      <button
+                        onClick={() => { setActiveMenu(null); useResonanceStore.getState().setTimelineTool('text'); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Kinetic Title Tool</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">T</span>
+                      </button>
+                    </>
+                  )}
+                  {activeMenu === 'Tools' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setActiveMenu(null);
+                          const st = useResonanceStore.getState().selectedTrack;
+                          if (st) {
+                            window.resonance?.transcribeTrack?.(st.file_path).then((words) => {
+                              if (Array.isArray(words)) {
+                                useResonanceStore.getState().setActiveLyrics(words);
+                              }
+                            });
+                          }
+                        }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-emerald-400 flex justify-between cursor-pointer"
+                      >
+                        <span>Whisper AI Vocal Sync</span>
+                        <span className="text-emerald-500 font-mono text-[9px]">AI</span>
+                      </button>
+                    </>
+                  )}
+                  {activeMenu === 'View' && (
+                    <>
+                      <button
+                        onClick={() => { setActiveMenu(null); setIsImmersive(!isImmersive); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Toggle 3D Immersive View</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">F</span>
+                      </button>
+                      <button
+                        onClick={() => { setActiveMenu(null); setAutoImmersiveEnabled(!autoImmersiveEnabled); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Auto-Immersive on Idle</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">{autoImmersiveEnabled ? 'ON' : 'OFF'}</span>
+                      </button>
+                    </>
+                  )}
+                  {activeMenu === 'Audio' && (
+                    <>
+                      <button
+                        onClick={() => { setActiveMenu(null); handleGlobalPlayPause(); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Play / Pause</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">Space</span>
+                      </button>
+                      <button
+                        onClick={() => { setActiveMenu(null); handleGlobalStop(); }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[#18181b] text-zinc-300 hover:text-[#00ffff] flex justify-between cursor-pointer"
+                      >
+                        <span>Stop & Return to Zero</span>
+                        <span className="text-zinc-500 font-mono text-[9px]">Return</span>
+                      </button>
+                    </>
+                  )}
+                  {activeMenu === 'Help' && (
+                    <>
+                      <div className="px-3 py-1 text-zinc-500 font-bold text-[9px] uppercase tracking-wider border-b border-[#1f1f23]">
+                        Project Resonance v0.1.0
+                      </div>
+                      <div className="px-3 py-1.5 text-zinc-400 text-[9px] leading-relaxed">
+                        Cyber-Industrial Visualizer & Audio Synthesizer Workstation
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 

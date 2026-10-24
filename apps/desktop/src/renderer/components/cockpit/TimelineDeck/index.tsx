@@ -31,18 +31,50 @@ export interface TimelineDeckProps {
 
 export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek }) => {
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
+  const setSelectedTrack = useResonanceStore((s) => s.setSelectedTrack);
+  const setActiveLyrics = useResonanceStore((s) => s.setActiveLyrics);
+  const setTracks = useResonanceStore((s) => s.setTracks);
   const isPlaying = useResonanceStore((s) => s.isPlaying);
   const currentTime = useResonanceStore((s) => s.currentTime);
   const duration = useResonanceStore((s) => s.duration);
   const activeLyrics = useResonanceStore((s) => s.activeLyrics);
   const seekTo = useResonanceStore((s) => s.seekTo);
+  const timelineTool = useResonanceStore((s) => s.timelineTool);
+  const setTimelineTool = useResonanceStore((s) => s.setTimelineTool);
 
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isLyricsMuted, setIsLyricsMuted] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
-  const [activeTool, setActiveTool] = useState<'select' | 'split' | 'text'>('select');
   const [snappingEnabled, setSnappingEnabled] = useState(true);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [whisperStatus, setWhisperStatus] = useState<string | null>(null);
+
+  const handleWhisperSync = async () => {
+    if (!selectedTrack || isTranscribing) return;
+    setIsTranscribing(true);
+    setWhisperStatus('Syncing...');
+    try {
+      const words = await window.resonance?.transcribeTrack?.(selectedTrack.file_path);
+      if (Array.isArray(words)) {
+        await window.resonance?.saveLyrics?.(selectedTrack.id, words, words.length === 0);
+        setActiveLyrics(words);
+        setSelectedTrack({ ...selectedTrack, has_lyrics: words.length > 0 ? 1 : 0 });
+        setTracks(
+          useResonanceStore.getState().tracks.map((t) =>
+            t.id === selectedTrack.id ? { ...t, has_lyrics: words.length > 0 ? 1 : 0 } : t
+          )
+        );
+        setWhisperStatus(`✓ ${words.length}w`);
+        setTimeout(() => setWhisperStatus(null), 3000);
+      }
+    } catch {
+      setWhisperStatus('Failed');
+      setTimeout(() => setWhisperStatus(null), 3000);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
 
   const timelineContainerRef = useRef<HTMLDivElement>(null);
 
@@ -126,9 +158,9 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
 
           <button
             type="button"
-            onClick={() => setActiveTool('select')}
+            onClick={() => setTimelineTool('select')}
             className={`p-1.5 rounded-xs transition-all cursor-pointer border ${
-              activeTool === 'select'
+              timelineTool === 'select'
                 ? 'bg-[#18181b] text-[#00ffff] border-[#00ffff]/50 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
                 : 'border-transparent hover:bg-[#18181b] hover:text-white'
             }`}
@@ -139,9 +171,9 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
 
           <button
             type="button"
-            onClick={() => setActiveTool('split')}
+            onClick={() => setTimelineTool('split')}
             className={`p-1.5 rounded-xs transition-all cursor-pointer border ${
-              activeTool === 'split'
+              timelineTool === 'split'
                 ? 'bg-[#18181b] text-[#00ffff] border-[#00ffff]/50 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
                 : 'border-transparent hover:bg-[#18181b] hover:text-white'
             }`}
@@ -163,9 +195,9 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
           {/* Title Layer */}
           <button
             type="button"
-            onClick={() => setActiveTool('text')}
+            onClick={() => setTimelineTool('text')}
             className={`px-2 py-1 rounded-xs border text-[10px] font-sans font-semibold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-              activeTool === 'text'
+              timelineTool === 'text'
                 ? 'bg-[#18181b] border-[#00ffff]/50 text-[#00ffff]'
                 : 'bg-[#111114] border-[#27272a] text-zinc-300 hover:text-white hover:border-[#00ffff]/40'
             }`}
@@ -178,11 +210,17 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
           {/* AI Whisper STT Sync */}
           <button
             type="button"
-            className="px-2 py-1 bg-[#10241b] hover:bg-[#163326] border border-emerald-500/40 rounded-xs text-[10px] font-sans font-semibold tracking-wider text-emerald-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+            onClick={handleWhisperSync}
+            disabled={isTranscribing || !selectedTrack}
+            className={`px-2 py-1 border rounded-xs text-[10px] font-sans font-semibold tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed ${
+              selectedTrack?.has_lyrics
+                ? 'bg-[#10241b] hover:bg-[#163326] border-emerald-500/50 text-emerald-300'
+                : 'bg-[#1c1328] hover:bg-[#2a1d3d] border-fuchsia-500/50 text-fuchsia-300'
+            }`}
             title="Whisper AI Speech-To-Text Sync"
           >
-            <Sparkles className="w-3 h-3 text-emerald-400" />
-            <span>WHISPER</span>
+            <Sparkles className="w-3 h-3 text-current" />
+            <span>{whisperStatus || (selectedTrack?.has_lyrics ? 'WHISPER ✓' : 'WHISPER')}</span>
           </button>
 
           <button

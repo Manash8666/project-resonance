@@ -195,6 +195,18 @@ const App: React.FC = () => {
           e.preventDefault();
           handleSeek(Math.min(useResonanceStore.getState().duration || 60, useResonanceStore.getState().currentTime + 1));
           break;
+        case 'KeyC':
+          e.preventDefault();
+          useResonanceStore.getState().setTimelineTool('split');
+          break;
+        case 'KeyV':
+          e.preventDefault();
+          useResonanceStore.getState().setTimelineTool('select');
+          break;
+        case 'KeyT':
+          e.preventDefault();
+          useResonanceStore.getState().setTimelineTool('text');
+          break;
         case 'KeyF':
           e.preventDefault();
           setIsImmersive(!isImmersive);

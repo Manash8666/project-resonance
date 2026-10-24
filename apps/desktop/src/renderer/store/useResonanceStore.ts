@@ -38,6 +38,7 @@ export interface ForgeState {
   isExportModalOpen: boolean;
   isImmersive: boolean;
   autoImmersiveEnabled: boolean;
+  timelineTool: 'select' | 'split' | 'text';
   setBackgroundImageUrl: (url: string | null) => void;
   setDynamicsMode: (mode: 'ballistic' | 'fluid' | 'hybrid') => void;
   updateShaderParam: (key: string, value: number | boolean) => void;
@@ -45,6 +46,7 @@ export interface ForgeState {
   setIsImmersive: (isImmersive: boolean) => void;
   setAutoImmersiveEnabled: (enabled: boolean) => void;
   toggleImmersive: () => void;
+  setTimelineTool: (tool: 'select' | 'split' | 'text') => void;
 }
 
 // --- SLICE C: THE TELEMETRY (Isolated 60fps Real-Time Audio) ---
@@ -120,6 +122,7 @@ export const useResonanceStore = create<ResonanceStore>()(
       isExportModalOpen: false,
       isImmersive: false,
       autoImmersiveEnabled: false,
+      timelineTool: 'select',
       setBackgroundImageUrl: (backgroundImageUrl) => set({ backgroundImageUrl }),
       setDynamicsMode: (dynamicsMode) => set({ dynamicsMode }),
       updateShaderParam: (key, value) =>
@@ -130,6 +133,7 @@ export const useResonanceStore = create<ResonanceStore>()(
       setIsImmersive: (isImmersive) => set({ isImmersive }),
       setAutoImmersiveEnabled: (autoImmersiveEnabled) => set({ autoImmersiveEnabled }),
       toggleImmersive: () => set((state) => ({ isImmersive: !state.isImmersive })),
+      setTimelineTool: (timelineTool) => set({ timelineTool }),
 
       // Telemetry Initializers
       currentTime: 0,
