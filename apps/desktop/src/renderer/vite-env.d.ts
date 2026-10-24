@@ -41,6 +41,13 @@ export interface ResonanceAPI {
   setConfig: (key: string, value: any) => Promise<any>;
   removeConfig: (key: string) => Promise<any>;
 
+  // Window Controls
+  minimizeWindow?: () => void;
+  maximizeWindow?: () => void;
+  closeWindow?: () => void;
+  isWindowMaximized?: () => Promise<boolean>;
+  onWindowMaximizedChange?: (cb: (isMax: boolean) => void) => () => void;
+
   // Lifecycle
   onTeardown?: (cb: () => void) => () => void;
 }

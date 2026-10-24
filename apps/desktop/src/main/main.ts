@@ -114,11 +114,41 @@ function createWindow(): void {
     mainWindow.loadFile(indexPath);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
+
+  // Synchronize maximize state with renderer window controls
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window:maximized:change', true);
+  });
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window:maximized:change', false);
+  });
 }
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
 
 function registerHandlers(): void {
+  // ─── Native Window Controls ──────────────────────────────────────────────────
+  ipcMain.on('window:minimize', () => {
+    mainWindow?.minimize();
+  });
+
+  ipcMain.on('window:maximize', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  });
+
+  ipcMain.on('window:close', () => {
+    mainWindow?.close();
+  });
+
+  ipcMain.handle('window:isMaximized', () => {
+    return mainWindow?.isMaximized() ?? false;
+  });
+
   // Open native folder picker — returns chosen path or null
   ipcMain.handle('dialog:openFolder', async () => {
     if (!mainWindow) return null;

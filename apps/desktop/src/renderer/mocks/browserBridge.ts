@@ -201,6 +201,13 @@ export function installBrowserBridge(): void {
     setConfig: async () => true,
     removeConfig: async () => true,
 
+    // Window Controls (Mock for browser)
+    minimizeWindow: () => console.log('[Window] Minimize triggered'),
+    maximizeWindow: () => console.log('[Window] Maximize/Restore triggered'),
+    closeWindow: () => console.log('[Window] Close triggered'),
+    isWindowMaximized: async () => false,
+    onWindowMaximizedChange: () => () => {},
+
     onTeardown: (_cb) => () => {},
   };
 

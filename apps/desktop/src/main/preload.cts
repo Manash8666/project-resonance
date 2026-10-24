@@ -112,6 +112,17 @@ const resonanceAPI = {
   removeConfig: (key: string): Promise<boolean> =>
     ipcRenderer.invoke('config:remove', key),
 
+  // Window Controls
+  minimizeWindow: () => ipcRenderer.send('window:minimize'),
+  maximizeWindow: () => ipcRenderer.send('window:maximize'),
+  closeWindow: () => ipcRenderer.send('window:close'),
+  isWindowMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:isMaximized'),
+  onWindowMaximizedChange: (cb: (isMax: boolean) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, isMax: boolean) => cb(isMax);
+    ipcRenderer.on('window:maximized:change', handler);
+    return () => ipcRenderer.removeListener('window:maximized:change', handler);
+  },
+
   // Teardown hook
   onTeardown: (cb: () => void) => {
     const handler = () => cb();

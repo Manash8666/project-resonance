@@ -21,6 +21,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
   const setIsImmersive = useResonanceStore((s) => s.setIsImmersive);
 
   const [scanStatus, setScanStatus] = useState<string | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  React.useEffect(() => {
+    window.resonance?.isWindowMaximized?.().then((max) => {
+      if (typeof max === 'boolean') setIsMaximized(max);
+    });
+    const cleanup = window.resonance?.onWindowMaximizedChange?.((max) => {
+      setIsMaximized(max);
+    });
+    return () => cleanup?.();
+  }, []);
 
   const handleScanFolder = async () => {
     if (onScan) {
@@ -55,8 +66,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
   };
 
   return (
-    <header className="h-12 bg-[#080a0e] border-b border-[#1c222c] flex items-center justify-between px-4 font-mono select-none z-20">
-      {/* Brand & Telemetry Status */}
+    <header
+      onDoubleClick={() => window.resonance?.maximizeWindow?.()}
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      className="h-11 bg-[#080a0e] border-b border-[#1c222c] flex items-center justify-between pl-4 pr-0 font-mono select-none z-20"
+    >
+      {/* Brand & Telemetry Status (Draggable) */}
       <div className="flex items-center space-x-3">
         <div className="flex items-center space-x-2">
           <div className="w-2.5 h-2.5 rounded-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff] animate-pulse" />
@@ -71,8 +86,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
         </span>
       </div>
 
-      {/* Quick FTS5 Search Input */}
-      <div className="flex-1 max-w-md mx-6">
+      {/* Quick FTS5 Search Input (No-Drag) */}
+      <div
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        className="flex-1 max-w-xs xl:max-w-sm mx-3"
+      >
         <div className="relative">
           <input
             type="text"
@@ -94,7 +112,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons & Window Controls */}
       <div className="flex items-center space-x-3">
         {scanStatus && (
           <span className="text-[11px] text-[#00f0ff] animate-pulse">
@@ -102,54 +120,116 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
           </span>
         )}
 
-        {/* Auto-Immersive Inactivity Toggle */}
-        <button
-          onClick={() => setAutoImmersiveEnabled(!autoImmersiveEnabled)}
-          className={`px-2.5 py-1.5 border rounded text-xs transition-all flex items-center space-x-1.5 cursor-pointer ${
-            autoImmersiveEnabled
-              ? 'bg-[#00f0ff]/10 border-[#00f0ff]/40 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.15)]'
-              : 'bg-[#121620] border-[#232b3b] text-zinc-400 hover:text-zinc-200'
-          }`}
-          title="Toggle Auto-Immersive Mode on idle playback (4s inactivity timeout)"
+        <div
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          className="flex items-center space-x-3"
         >
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              autoImmersiveEnabled ? 'bg-[#00f0ff] animate-pulse shadow-[0_0_6px_#00f0ff]' : 'bg-zinc-600'
+          {/* Auto-Immersive Inactivity Toggle */}
+          <button
+            onClick={() => setAutoImmersiveEnabled(!autoImmersiveEnabled)}
+            className={`px-2.5 py-1.5 border rounded text-xs transition-all flex items-center space-x-1.5 cursor-pointer ${
+              autoImmersiveEnabled
+                ? 'bg-[#00f0ff]/10 border-[#00f0ff]/40 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.15)]'
+                : 'bg-[#121620] border-[#232b3b] text-zinc-400 hover:text-zinc-200'
             }`}
-          />
-          <span className="text-[10px] tracking-wider font-mono">
-            {autoImmersiveEnabled ? 'AUTO: ON' : 'AUTO: OFF'}
-          </span>
-        </button>
+            title="Toggle Auto-Immersive Mode on idle playback (20s inactivity timeout)"
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                autoImmersiveEnabled ? 'bg-[#00f0ff] animate-pulse shadow-[0_0_6px_#00f0ff]' : 'bg-zinc-600'
+              }`}
+            />
+            <span className="text-[10px] tracking-wider font-mono">
+              {autoImmersiveEnabled ? 'AUTO: ON' : 'AUTO: OFF'}
+            </span>
+          </button>
 
-        {/* Immersive Mode Trigger */}
-        <button
-          onClick={() => setIsImmersive(true)}
-          className="px-2.5 py-1.5 bg-[#121620] hover:bg-[#1a2130] border border-[#232b3b] hover:border-[#00f0ff]/60 text-xs text-zinc-200 hover:text-white rounded transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm group"
-          title="Enter Immersive Mode (Hotkey: F or double-click visualizer)"
-        >
-          <span className="text-[#00f0ff] group-hover:scale-110 transition-transform">⛶</span>
-          <span className="text-[10px] tracking-wider font-mono">IMMERSIVE</span>
-          <kbd className="px-1 py-0.2 text-[8px] bg-black/40 border border-zinc-700/80 rounded text-zinc-400">
-            F
-          </kbd>
-        </button>
+          {/* Immersive Mode Trigger */}
+          <button
+            onClick={() => setIsImmersive(true)}
+            className="px-2.5 py-1.5 bg-[#121620] hover:bg-[#1a2130] border border-[#232b3b] hover:border-[#00f0ff]/60 text-xs text-zinc-200 hover:text-white rounded transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm group"
+            title="Enter Immersive Mode (Hotkey: F or double-click visualizer)"
+          >
+            <span className="text-[#00f0ff] group-hover:scale-110 transition-transform">⛶</span>
+            <span className="text-[10px] tracking-wider font-mono">IMMERSIVE</span>
+            <kbd className="px-1 py-0.2 text-[8px] bg-black/40 border border-zinc-700/80 rounded text-zinc-400">
+              F
+            </kbd>
+          </button>
 
-        <button
-          onClick={handleScanFolder}
-          disabled={isScanning}
-          className="px-3 py-1.5 bg-[#121620] hover:bg-[#1a2130] border border-[#232b3b] hover:border-[#00f0ff]/50 text-xs text-zinc-200 rounded transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
-        >
-          <span>{isScanning ? 'SCANNING...' : 'SCAN MUSIC FOLDER'}</span>
-        </button>
+          <button
+            onClick={handleScanFolder}
+            disabled={isScanning}
+            className="px-3 py-1.5 bg-[#121620] hover:bg-[#1a2130] border border-[#232b3b] hover:border-[#00f0ff]/50 text-xs text-zinc-200 rounded transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <span>{isScanning ? 'SCANNING...' : 'SCAN MUSIC FOLDER'}</span>
+          </button>
 
-        <button
-          onClick={() => setExportModalOpen(true)}
-          disabled={!selectedTrack}
-          className="px-3 py-1.5 bg-[#14233a] hover:bg-[#1b3152] border border-[#00f0ff]/40 hover:border-[#00f0ff] text-xs text-[#00f0ff] font-bold rounded transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(0,240,255,0.15)]"
+          <button
+            onClick={() => setExportModalOpen(true)}
+            disabled={!selectedTrack}
+            className="px-3 py-1.5 bg-[#14233a] hover:bg-[#1b3152] border border-[#00f0ff]/40 hover:border-[#00f0ff] text-xs text-[#00f0ff] font-bold rounded transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(0,240,255,0.15)]"
+          >
+            <span>EXPORT 4K / 60FPS</span>
+          </button>
+        </div>
+
+        {/* ─── Cybernetic Window Controls (Minimize, Maximize / Restore, Close) ─── */}
+        <div
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          className="flex items-center h-11 ml-2 border-l border-[#1c222c]"
         >
-          <span>EXPORT 4K / 60FPS</span>
-        </button>
+          {/* Minimize */}
+          <button
+            type="button"
+            onClick={() => window.resonance?.minimizeWindow?.()}
+            className="w-11 h-11 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
+            title="Minimize"
+          >
+            <svg width="10" height="1" viewBox="0 0 10 1" fill="none">
+              <rect width="10" height="1" fill="currentColor" />
+            </svg>
+          </button>
+
+          {/* Maximize / Restore */}
+          <button
+            type="button"
+            onClick={() => window.resonance?.maximizeWindow?.()}
+            className="w-11 h-11 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
+            title={isMaximized ? 'Restore Down' : 'Maximize'}
+          >
+            {isMaximized ? (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path
+                  d="M2 0v2H0v8h8V8h2V0H2zm6 8H1V3h7v5zm1-2V1H3v1h5v4h1z"
+                  fill="currentColor"
+                />
+              </svg>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path
+                  d="M0 0v10h10V0H0zm9 9H1V1h8v8z"
+                  fill="currentColor"
+                />
+              </svg>
+            )}
+          </button>
+
+          {/* Close */}
+          <button
+            type="button"
+            onClick={() => window.resonance?.closeWindow?.()}
+            className="w-12 h-11 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#e81123] active:bg-[#f1707a] transition-colors cursor-pointer group"
+            title="Close (Alt+F4)"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path
+                d="M0.7 0L5 4.3 9.3 0 10 0.7 5.7 5 10 9.3 9.3 10 5 5.7 0.7 10 0 9.3 4.3 5 0 0.7z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
   );
