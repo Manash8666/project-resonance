@@ -23,6 +23,7 @@ protocol.registerSchemesAsPrivileged([
       supportFetchAPI: true,
       stream: true,
       bypassCSP: true,
+      corsEnabled: true,
     },
   },
 ]);
@@ -379,7 +380,7 @@ app.whenReady().then(() => {
   });
 
   // Security Hardening: Path-traversal proof and extension-validated media streaming
-  protocol.handle('media', (request) => {
+  protocol.handle('media', async (request) => {
     try {
       const url = new URL(request.url);
       let filePath = decodeURIComponent(url.pathname);
@@ -394,7 +395,15 @@ app.whenReady().then(() => {
         return new Response('Access Denied: Invalid audio target', { status: 403 });
       }
 
-      return net.fetch(pathToFileURL(normalizedPath).toString());
+      const res = await net.fetch(pathToFileURL(normalizedPath).toString());
+      const headers = new Headers(res.headers);
+      headers.set('Access-Control-Allow-Origin', '*');
+      headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      return new Response(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers,
+      });
     } catch {
       return new Response('Bad Request', { status: 400 });
     }

@@ -11,14 +11,56 @@ const generateMockPeaks = (seed: number): number[] => {
   return peaks;
 };
 
-// Generates a tiny valid 1-second silent MP3 data URL for browser audio testing
-const SILENT_AUDIO_DATA_URI =
-  'data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YRAAAAAAAAAAAAAAAAAAAAAAAAAA';
+// Generates a 60-second synthetic synthwave audio track with real sub-bass and harmonic leads
+function generateSyntheticAudioDataUri(durationSec = 60): string {
+  const sampleRate = 22050;
+  const numSamples = sampleRate * durationSec;
+  const buffer = new Uint8Array(44 + numSamples);
+
+  const view = new DataView(buffer.buffer);
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + numSamples, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // Mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate, true);
+  view.setUint16(32, 1, true);
+  view.setUint16(34, 8, true); // 8-bit
+  writeString(36, 'data');
+  view.setUint32(40, numSamples, true);
+
+  // Generate musical synthwave arpeggio: 55Hz sub-bass + active lead
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const beat = Math.floor(t * 2) % 4;
+    const noteFreq = beat === 0 ? 110 : (beat === 1 ? 138.59 : (beat === 2 ? 164.81 : 220));
+    const bass = Math.sin(2 * Math.PI * 55 * t);
+    const lead = Math.sin(2 * Math.PI * noteFreq * t);
+    const sample = 0.5 * bass + 0.3 * lead;
+    buffer[44 + i] = Math.floor(128 + sample * 110);
+  }
+
+  let binary = '';
+  const len = buffer.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(buffer[i]);
+  }
+  return 'data:audio/wav;base64,' + btoa(binary);
+}
+
+const SYNTHETIC_AUDIO_URI = generateSyntheticAudioDataUri(60);
 
 const MOCK_TRACKS = [
   {
     id: 1,
-    file_path: SILENT_AUDIO_DATA_URI,
+    file_path: SYNTHETIC_AUDIO_URI,
     file_name: 'Redline Flow.mp3',
     title: 'Redline Flow',
     artist_name: 'Resonance Protocol',
@@ -26,7 +68,7 @@ const MOCK_TRACKS = [
     genre: 'Synthwave',
     year: 2026,
     track_number: 1,
-    duration_ms: 215000,
+    duration_ms: 60000,
     has_lyrics: 1,
     is_instrumental: 0,
     waveform_peaks: JSON.stringify(generateMockPeaks(42)),
@@ -35,7 +77,7 @@ const MOCK_TRACKS = [
   },
   {
     id: 2,
-    file_path: SILENT_AUDIO_DATA_URI,
+    file_path: SYNTHETIC_AUDIO_URI,
     file_name: 'Orbital Descent.flac',
     title: 'Orbital Descent',
     artist_name: 'Acoustic Core',
@@ -43,7 +85,7 @@ const MOCK_TRACKS = [
     genre: 'Electronic',
     year: 2026,
     track_number: 2,
-    duration_ms: 184000,
+    duration_ms: 60000,
     has_lyrics: 0,
     is_instrumental: 1,
     waveform_peaks: JSON.stringify(generateMockPeaks(17)),
@@ -52,7 +94,7 @@ const MOCK_TRACKS = [
   },
   {
     id: 3,
-    file_path: SILENT_AUDIO_DATA_URI,
+    file_path: SYNTHETIC_AUDIO_URI,
     file_name: 'Sub-Bass Velocity.wav',
     title: 'Sub-Bass Velocity',
     artist_name: 'Neural Grid',
@@ -60,7 +102,7 @@ const MOCK_TRACKS = [
     genre: 'Drum & Bass',
     year: 2026,
     track_number: 3,
-    duration_ms: 242000,
+    duration_ms: 60000,
     has_lyrics: 1,
     is_instrumental: 0,
     waveform_peaks: JSON.stringify(generateMockPeaks(88)),

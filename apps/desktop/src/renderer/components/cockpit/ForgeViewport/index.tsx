@@ -108,6 +108,9 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
 
   const effectiveAudioElement = audioElement ?? audioEngine.getAudioElement();
   const bands = useResonanceStore((s) => s.bands);
+  const bandsRef = React.useRef(bands);
+  bandsRef.current = bands;
+
   const currentTime = useResonanceStore((s) => s.currentTime);
   const activeLyrics = useResonanceStore((s) => s.activeLyrics);
 
@@ -135,6 +138,7 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
         <VisualizerScene
           audioElement={effectiveAudioElement}
           dataTexture={audioEngine.getDataTexture() as any}
+          bandsRef={bandsRef}
           albumArtUrl={internalCoverArt}
         />
       </div>

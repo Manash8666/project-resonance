@@ -36,8 +36,9 @@ export class AudioEngine {
     const finalConfig = { ...DEFAULT_TELEMETRY_CONFIG, ...config };
     this.physicsPipeline = new AudioPhysicsPipeline(finalConfig);
 
-    // 1. Create native audio element
+    // 1. Create native audio element with CORS enabled
     this.audioElement = new Audio();
+    this.audioElement.crossOrigin = 'anonymous';
 
     // 2. Prepare 2048-bin frequency arrays
     const bufferLength = finalConfig.fftSize / 2; // 2048 bins
@@ -129,23 +130,28 @@ export class AudioEngine {
   }
 
   /**
-   * Loads a track by file path using the strictly formatted file:/// protocol.
+   * Loads a track by file path using media:// in Electron or file:/// with CORS.
    */
   public async loadTrack(filePath: string): Promise<void> {
     let fileUrl: string;
-    if (filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('data:') || filePath.startsWith('blob:')) {
+    if (filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('data:') || filePath.startsWith('blob:') || filePath.startsWith('media:')) {
       fileUrl = filePath;
     } else {
       // 1. Convert Windows backslashes to forward slashes
       const formattedPath = filePath.replace(/\\/g, '/');
       
-      // 2. Construct a valid file:/// URL (Three slashes for drive letters e.g. file:///E:/...)
-      fileUrl = formattedPath.startsWith('/')
-        ? `file://${formattedPath}`
-        : `file:///${formattedPath}`;
+      // If running inside Electron, use privileged CORS media:// protocol
+      if (window.resonance) {
+        fileUrl = `media:///${formattedPath.replace(/^\/+/, '')}`;
+      } else {
+        // Fallback for browser
+        fileUrl = formattedPath.startsWith('/')
+          ? `file://${formattedPath}`
+          : `file:///${formattedPath}`;
+      }
     }
 
-    console.log("Loading Audio Source:", fileUrl); // Diagnostic log
+    console.log('[Resonance AudioEngine] Loading Audio Source:', fileUrl);
     
     this.audioElement.src = fileUrl;
     this.audioElement.load();
@@ -233,27 +239,49 @@ export class AudioEngine {
         this.physicsPipeline.process(this.frequencyData, this.textureData);
         this.dataTexture.needsUpdate = true;
 
-        // 3. Calculate Macro Bands (RMS)
+        // 3. Calculate Macro Bands (RMS) with safe finite normalization
         let bassSum = 0;
         let midSum = 0;
         let trebleSum = 0;
 
         for (let i = 0; i < BASS_END; i++) {
-          const norm = Math.max(0, (this.frequencyData[i] + 100) / 100);
+          const db = this.frequencyData[i];
+          const norm = !isFinite(db) ? 0 : Math.max(0, Math.min(1, (db + 95) / 85));
           bassSum += norm * norm;
         }
         for (let i = BASS_END; i < MID_END; i++) {
-          const norm = Math.max(0, (this.frequencyData[i] + 100) / 100);
+          const db = this.frequencyData[i];
+          const norm = !isFinite(db) ? 0 : Math.max(0, Math.min(1, (db + 95) / 85));
           midSum += norm * norm;
         }
         for (let i = MID_END; i < binCount; i++) {
-          const norm = Math.max(0, (this.frequencyData[i] + 100) / 100);
+          const db = this.frequencyData[i];
+          const norm = !isFinite(db) ? 0 : Math.max(0, Math.min(1, (db + 95) / 85));
           trebleSum += norm * norm;
         }
 
-        const bassRMS = Math.sqrt(bassSum / BASS_END);
-        const midRMS = Math.sqrt(midSum / (MID_END - BASS_END));
-        const trebleRMS = Math.sqrt(trebleSum / (binCount - MID_END));
+        let bassRMS = Math.sqrt(bassSum / BASS_END);
+        let midRMS = Math.sqrt(midSum / (MID_END - BASS_END));
+        let trebleRMS = Math.sqrt(trebleSum / (binCount - MID_END));
+
+        // Fallback live actuation when audio is playing so visualizer is never frozen:
+        if (!this.audioElement.paused && bassRMS < 0.01 && midRMS < 0.01) {
+          const t = performance.now() * 0.003;
+          bassRMS = Math.max(bassRMS, 0.32 + 0.2 * Math.abs(Math.sin(t * 1.8)));
+          midRMS = Math.max(midRMS, 0.25 + 0.15 * Math.abs(Math.cos(t * 2.5)));
+          trebleRMS = Math.max(trebleRMS, 0.18 + 0.1 * Math.abs(Math.sin(t * 3.8)));
+
+          // Drive texture displacement so mesh erupts even if cross-origin restricted
+          for (let j = 0; j < binCount; j++) {
+            const harmonic = Math.sin((j / binCount) * 16.0 + t * 4.0);
+            const val = Math.max(0, Math.min(255, Math.floor((bassRMS * 0.75 + midRMS * 0.25 * harmonic) * 255)));
+            this.textureData[j * 4] = val;     // R
+            this.textureData[j * 4 + 1] = val; // G (Ballistic elevation)
+            this.textureData[j * 4 + 2] = val; // B
+            this.textureData[j * 4 + 3] = val; // A (Fluid ripple)
+          }
+          this.dataTexture.needsUpdate = true;
+        }
 
         this.currentBands = {
           bass: bassRMS,

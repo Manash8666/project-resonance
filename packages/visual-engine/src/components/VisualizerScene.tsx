@@ -37,8 +37,7 @@ const EqualizerMesh: React.FC<EqualizerMeshProps> = ({ textureRef, bandsRef }) =
   );
 
   useFrame((state) => {
-    if (!meshRef.current) return;
-    const currentBands = bandsRef.current || { bass: 0, mid: 0, treble: 0 };
+    const currentBands = bandsRef?.current || { bass: 0, mid: 0, treble: 0 };
 
     // Update Macro uniforms
     uniforms.u_bass.value = currentBands.bass;
@@ -47,7 +46,7 @@ const EqualizerMesh: React.FC<EqualizerMeshProps> = ({ textureRef, bandsRef }) =
     uniforms.u_time.value = state.clock.elapsedTime;
 
     // Update Micro zero-zero texture
-    if (textureRef.current) {
+    if (textureRef?.current) {
       uniforms.u_audioTexture.value = textureRef.current;
     }
 
@@ -59,7 +58,13 @@ const EqualizerMesh: React.FC<EqualizerMeshProps> = ({ textureRef, bandsRef }) =
   });
 
   return (
-    <mesh ref={meshRef} rotation={[-Math.PI / 2.3, 0, 0]} position={[0, -0.8, 0]}>
+    <mesh
+      ref={(node) => {
+        meshRef.current = node as any;
+      }}
+      rotation={[-Math.PI / 2.3, 0, 0]}
+      position={[0, -0.8, 0]}
+    >
       {/* High-segment plane for zero-zero vertex displacement (512 x 256) */}
       <planeGeometry args={[11, 6, 512, 256]} />
       <shaderMaterial
