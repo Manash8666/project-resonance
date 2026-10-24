@@ -12,6 +12,9 @@ import {
   Sparkles,
   Sliders,
   Check,
+  Cpu,
+  Layers,
+  Activity,
 } from 'lucide-react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 import { ShaderTuning } from './components/ShaderTuning.js';
@@ -36,10 +39,10 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
   const setActiveLyrics = useResonanceStore((s) => s.setActiveLyrics);
   const currentTime = useResonanceStore((s) => s.currentTime);
 
-  const [mainTab, setMainTab] = useState<'text' | 'video' | 'audio'>('video'); // Filmora default: Video
-  const [subTab, setSubTab] = useState<'basic' | 'mask' | 'ai'>('basic'); // Filmora sub-tab
+  const [mainTab, setMainTab] = useState<'video' | 'text' | 'audio'>('video');
+  const [subTab, setSubTab] = useState<'basic' | 'shader' | 'ai'>('basic');
 
-  // Filmora-style Transform State
+  // Transform Hardware State
   const [transformEnabled, setTransformEnabled] = useState(true);
   const [scaleX, setScaleX] = useState(100);
   const [scaleY, setScaleY] = useState(100);
@@ -106,142 +109,175 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
     setPosX(0);
     setPosY(0);
     setRotationAngle(0);
+    setOpacity(100);
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#080a0e] border-l border-[#1a2230] font-mono select-none overflow-hidden text-xs">
-      {/* ─── 1. Main Navigation Ribbon Tabs (Text, Video, Audio) ─── */}
-      <div className="h-8 bg-[#0b0e14] border-b border-[#1a2230] flex items-center px-2 gap-1 shrink-0 text-[11px]">
+    <div className="flex flex-col h-full bg-[#0a0a0a] border-l border-[#27272a] font-mono select-none overflow-hidden text-xs">
+      {/* ─── 1. Hardware Rack Unit Header Bar ─── */}
+      <div className="h-8 bg-[#0e0e11] border-b border-[#27272a] flex items-center justify-between px-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="rack-screw" />
+          <span className="font-sans font-bold text-[10px] text-zinc-300 uppercase tracking-widest flex items-center gap-1.5">
+            <Sliders className="w-3.5 h-3.5 text-[#00ffff]" />
+            The Rack // Attributes
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-mono text-zinc-500 bg-[#050505] px-1.5 py-0.5 rounded border border-[#27272a]">
+            MOD-04
+          </span>
+          <div className="rack-screw" />
+        </div>
+      </div>
+
+      {/* ─── 2. Main Navigation Ribbon Tabs (Video, Text, Audio) ─── */}
+      <div className="h-8 bg-[#070709] border-b border-[#27272a] flex items-center px-2 gap-1 shrink-0 text-[11px] font-sans">
         <button
           onClick={() => setMainTab('video')}
-          className={`px-3 py-1 rounded-t-sm uppercase font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`flex-1 py-1 rounded-xs uppercase font-bold tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             mainTab === 'video'
-              ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff]'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#18181b] text-[#00ffff] border-b-2 border-b-[#00ffff] shadow-[0_2px_8px_rgba(0,255,255,0.2)]'
+              : 'text-zinc-500 hover:text-zinc-300 hover:bg-[#111114]'
           }`}
         >
-          <Video className="w-3 h-3" />
+          <Video className="w-3 h-3 text-current" />
           <span>Video</span>
         </button>
 
         <button
           onClick={() => setMainTab('text')}
-          className={`px-3 py-1 rounded-t-sm uppercase font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`flex-1 py-1 rounded-xs uppercase font-bold tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             mainTab === 'text'
-              ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff]'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#18181b] text-[#00ffff] border-b-2 border-b-[#00ffff] shadow-[0_2px_8px_rgba(0,255,255,0.2)]'
+              : 'text-zinc-500 hover:text-zinc-300 hover:bg-[#111114]'
           }`}
         >
-          <Type className="w-3 h-3" />
+          <Type className="w-3 h-3 text-current" />
           <span>Text</span>
         </button>
 
         <button
           onClick={() => setMainTab('audio')}
-          className={`px-3 py-1 rounded-t-sm uppercase font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`flex-1 py-1 rounded-xs uppercase font-bold tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             mainTab === 'audio'
-              ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff]'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#18181b] text-[#00ffff] border-b-2 border-b-[#00ffff] shadow-[0_2px_8px_rgba(0,255,255,0.2)]'
+              : 'text-zinc-500 hover:text-zinc-300 hover:bg-[#111114]'
           }`}
         >
-          <Volume2 className="w-3 h-3" />
+          <Volume2 className="w-3 h-3 text-current" />
           <span>Audio</span>
         </button>
       </div>
 
-      {/* ─── 2. Sub-Category Tabs (Basic, Mask / Shader, AI Tools) ─── */}
-      <div className="h-7 bg-[#080b10] border-b border-[#161d28] flex items-center px-3 gap-2 shrink-0 text-[10px]">
+      {/* ─── 3. Sub-Category Tabs (Basic, Shader FX, AI Tools) ─── */}
+      <div className="h-7 bg-[#0a0a0c] border-b border-[#1f1f23] flex items-center px-3 gap-2 shrink-0 text-[10px] font-mono">
         <button
           onClick={() => setSubTab('basic')}
-          className={`px-2 py-0.5 rounded cursor-pointer ${
-            subTab === 'basic' ? 'bg-[#182638] text-[#00f0ff] font-bold' : 'text-zinc-500 hover:text-zinc-300'
+          className={`px-2 py-0.5 rounded-xs cursor-pointer transition-all ${
+            subTab === 'basic'
+              ? 'bg-[#18181b] text-[#00ffff] font-bold border border-[#00ffff]/40'
+              : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
-          Basic
+          BASIC
         </button>
         <button
-          onClick={() => setSubTab('mask')}
-          className={`px-2 py-0.5 rounded cursor-pointer ${
-            subTab === 'mask' ? 'bg-[#182638] text-[#00f0ff] font-bold' : 'text-zinc-500 hover:text-zinc-300'
+          onClick={() => setSubTab('shader')}
+          className={`px-2 py-0.5 rounded-xs cursor-pointer transition-all ${
+            subTab === 'shader'
+              ? 'bg-[#18181b] text-[#00ffff] font-bold border border-[#00ffff]/40'
+              : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
-          Shader FX
+          SHADER FX
         </button>
         <button
           onClick={() => setSubTab('ai')}
-          className={`px-2 py-0.5 rounded cursor-pointer flex items-center gap-1 ${
-            subTab === 'ai' ? 'bg-[#182638] text-[#00f0ff] font-bold' : 'text-zinc-500 hover:text-zinc-300'
+          className={`px-2 py-0.5 rounded-xs cursor-pointer flex items-center gap-1 transition-all ${
+            subTab === 'ai'
+              ? 'bg-[#18181b] text-[#00ffff] font-bold border border-[#00ffff]/40'
+              : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
-          <span>AI Tools</span>
-          <span className="text-[9px] text-[#00f0ff]">›</span>
+          <span>AI TOOLS</span>
+          <span className="text-[9px] text-[#00ffff]">›</span>
         </button>
       </div>
 
-      {/* ─── 3. Scrollable Properties Body ─── */}
+      {/* ─── 4. Scrollable Hardware Properties Body ─── */}
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {/* TAB: VIDEO or BASIC */}
         {mainTab === 'video' && (
           <>
-            {/* Transform Section Accordion */}
-            <div className="bg-[#0b0e14] border border-[#1a2230] rounded-md p-3 space-y-3">
-              <div className="flex items-center justify-between border-b border-[#161c28] pb-1.5">
+            {/* Transform Hardware Unit */}
+            <div className="bg-[#09090c] border border-[#27272a] rounded-sm p-3 space-y-3 panel-recessed relative">
+              {/* Screws */}
+              <div className="absolute top-1.5 left-1.5 rack-screw" />
+              <div className="absolute top-1.5 right-1.5 rack-screw" />
+
+              <div className="flex items-center justify-between border-b border-[#27272a] pb-2 pl-3 pr-3">
                 <div className="flex items-center gap-2">
-                  {/* Green/Cyan Active Toggle Switch */}
+                  {/* Heavy-duty Tactile Rocker Switch */}
                   <button
                     onClick={() => setTransformEnabled(!transformEnabled)}
-                    className={`w-7 h-3.5 rounded-full transition-colors relative cursor-pointer ${
-                      transformEnabled ? 'bg-[#00f0ff]' : 'bg-zinc-700'
+                    className={`w-7 h-3.5 rounded-xs transition-all relative cursor-pointer border ${
+                      transformEnabled
+                        ? 'bg-[#00ffff]/20 border-[#00ffff] shadow-[0_0_8px_rgba(0,255,255,0.4)]'
+                        : 'bg-[#18181b] border-zinc-700'
                     }`}
+                    title="Toggle Transform Hardware Module"
                   >
                     <span
-                      className={`block w-2.5 h-2.5 rounded-full bg-black transition-transform ${
-                        transformEnabled ? 'translate-x-3.5' : 'translate-x-0.5'
+                      className={`block w-2.5 h-2.5 rounded-xs transition-transform ${
+                        transformEnabled ? 'translate-x-3.5 bg-[#00ffff]' : 'translate-x-0.5 bg-zinc-500'
                       }`}
                     />
                   </button>
-                  <span className="font-bold text-white text-[11px]">Transform</span>
+                  <span className="font-sans font-bold text-white text-[11px] tracking-wide uppercase">
+                    Transform
+                  </span>
                 </div>
                 <button
                   onClick={handleResetTransform}
-                  className="flex items-center gap-1 text-[9px] text-zinc-500 hover:text-[#00f0ff] cursor-pointer transition-colors"
+                  className="flex items-center gap-1 text-[9px] font-mono text-zinc-500 hover:text-[#00ffff] cursor-pointer transition-colors"
                   title="Reset Transform Values"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
-                  <span>Reset</span>
+                  <span>RESET</span>
                 </button>
               </div>
 
               {transformEnabled && (
-                <div className="space-y-2.5 text-[10px]">
-                  {/* Scale X & Y */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-zinc-400">
-                      <span>Scale</span>
+                <div className="space-y-3 text-[10px] px-1">
+                  {/* Scale X & Y with Linking */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-zinc-400 font-sans uppercase tracking-wider text-[10px]">
+                      <span>Scale Geometry</span>
                       <button
                         onClick={() => setIsScaleLinked(!isScaleLinked)}
-                        className={`flex items-center gap-1 text-[9px] cursor-pointer transition-colors ${
-                          isScaleLinked ? 'text-[#00f0ff]' : 'text-zinc-600'
+                        className={`flex items-center gap-1 text-[9px] font-mono cursor-pointer transition-colors ${
+                          isScaleLinked ? 'text-[#00ffff]' : 'text-zinc-600'
                         }`}
                         title={isScaleLinked ? 'Proportions Linked' : 'Proportions Free'}
                       >
                         {isScaleLinked ? (
                           <>
                             <Link2 className="w-2.5 h-2.5" />
-                            <span>Linked</span>
+                            <span>LINKED</span>
                           </>
                         ) : (
                           <>
                             <Unlink className="w-2.5 h-2.5" />
-                            <span>Unlinked</span>
+                            <span>FREE</span>
                           </>
                         )}
                       </button>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-1.5 bg-[#0e131b] border border-[#1e2736] rounded px-2 py-1">
-                        <span className="text-zinc-500 font-bold">X</span>
+                      <div className="flex items-center gap-1.5 bg-[#050505] border border-[#27272a] rounded-xs px-2 py-1">
+                        <span className="text-zinc-500 font-bold font-mono">X</span>
                         <input
                           type="number"
                           value={scaleX}
@@ -250,13 +286,13 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
                             setScaleX(val);
                             if (isScaleLinked) setScaleY(val);
                           }}
-                          className="w-full bg-transparent text-right text-zinc-200 focus:outline-none"
+                          className="w-full bg-transparent text-right text-[#00ffff] font-mono font-bold focus:outline-none"
                         />
-                        <span className="text-zinc-500">%</span>
+                        <span className="text-zinc-600 font-mono">%</span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 bg-[#0e131b] border border-[#1e2736] rounded px-2 py-1">
-                        <span className="text-zinc-500 font-bold">Y</span>
+                      <div className="flex items-center gap-1.5 bg-[#050505] border border-[#27272a] rounded-xs px-2 py-1">
+                        <span className="text-zinc-500 font-bold font-mono">Y</span>
                         <input
                           type="number"
                           value={scaleY}
@@ -265,71 +301,75 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
                             setScaleY(val);
                             if (isScaleLinked) setScaleX(val);
                           }}
-                          className="w-full bg-transparent text-right text-zinc-200 focus:outline-none"
+                          className="w-full bg-transparent text-right text-[#00ffff] font-mono font-bold focus:outline-none"
                         />
-                        <span className="text-zinc-500">%</span>
+                        <span className="text-zinc-600 font-mono">%</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Position X & Y */}
-                  <div className="space-y-1">
-                    <span className="text-zinc-400">Position</span>
+                  <div className="space-y-1.5">
+                    <span className="text-zinc-400 font-sans uppercase tracking-wider text-[10px] block">
+                      Position Offset
+                    </span>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-1.5 bg-[#0e131b] border border-[#1e2736] rounded px-2 py-1">
-                        <span className="text-zinc-500 font-bold">X</span>
+                      <div className="flex items-center gap-1.5 bg-[#050505] border border-[#27272a] rounded-xs px-2 py-1">
+                        <span className="text-zinc-500 font-bold font-mono">X</span>
                         <input
                           type="number"
                           value={posX}
                           onChange={(e) => setPosX(parseFloat(e.target.value) || 0)}
-                          className="w-full bg-transparent text-right text-zinc-200 focus:outline-none"
+                          className="w-full bg-transparent text-right text-zinc-200 font-mono focus:outline-none"
                         />
-                        <span className="text-zinc-500">px</span>
+                        <span className="text-zinc-600 font-mono">px</span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 bg-[#0e131b] border border-[#1e2736] rounded px-2 py-1">
-                        <span className="text-zinc-500 font-bold">Y</span>
+                      <div className="flex items-center gap-1.5 bg-[#050505] border border-[#27272a] rounded-xs px-2 py-1">
+                        <span className="text-zinc-500 font-bold font-mono">Y</span>
                         <input
                           type="number"
                           value={posY}
                           onChange={(e) => setPosY(parseFloat(e.target.value) || 0)}
-                          className="w-full bg-transparent text-right text-zinc-200 focus:outline-none"
+                          className="w-full bg-transparent text-right text-zinc-200 font-mono focus:outline-none"
                         />
-                        <span className="text-zinc-500">px</span>
+                        <span className="text-zinc-600 font-mono">px</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Rotate Angle Dial & Flip Buttons */}
-                  <div className="flex items-center justify-between pt-1">
+                  {/* Rotate Angle Dial & Flip Hardware Buttons */}
+                  <div className="flex items-center justify-between pt-1 border-t border-[#1a1a1f]">
                     <div className="flex items-center gap-2">
-                      <span className="text-zinc-400">Rotate</span>
-                      <div className="flex items-center gap-1 bg-[#0e131b] border border-[#1e2736] rounded px-2 py-1">
+                      <span className="text-zinc-400 font-sans uppercase tracking-wider text-[10px]">
+                        Rotation
+                      </span>
+                      <div className="flex items-center gap-1 bg-[#050505] border border-[#27272a] rounded-xs px-2 py-1">
                         <input
                           type="number"
                           value={rotationAngle}
                           onChange={(e) => setRotationAngle(parseFloat(e.target.value) || 0)}
-                          className="w-12 bg-transparent text-right text-zinc-200 focus:outline-none"
+                          className="w-10 bg-transparent text-right text-[#00ffff] font-mono font-bold focus:outline-none"
                         />
-                        <span className="text-zinc-500">°</span>
+                        <span className="text-zinc-600 font-mono">°</span>
                       </div>
                     </div>
 
-                    {/* Flip Horizontal / Vertical Buttons */}
-                    <div className="flex items-center gap-1">
+                    {/* Flip Horizontal / Vertical Hardware Buttons */}
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        className="p-1.5 bg-[#0e131b] hover:bg-[#161e2b] border border-[#1e2736] rounded text-zinc-300 hover:text-white cursor-pointer transition-colors"
+                        className="p-1.5 bg-[#050505] hover:bg-[#18181b] border border-[#27272a] hover:border-[#00ffff]/40 rounded-xs text-zinc-300 hover:text-white cursor-pointer transition-colors shadow-xs"
                         title="Flip Horizontal"
                       >
-                        <FlipHorizontal className="w-3 h-3" />
+                        <FlipHorizontal className="w-3 h-3 text-zinc-400 hover:text-[#00ffff]" />
                       </button>
                       <button
                         type="button"
-                        className="p-1.5 bg-[#0e131b] hover:bg-[#161e2b] border border-[#1e2736] rounded text-zinc-300 hover:text-white cursor-pointer transition-colors"
+                        className="p-1.5 bg-[#050505] hover:bg-[#18181b] border border-[#27272a] hover:border-[#00ffff]/40 rounded-xs text-zinc-300 hover:text-white cursor-pointer transition-colors shadow-xs"
                         title="Flip Vertical"
                       >
-                        <FlipVertical className="w-3 h-3" />
+                        <FlipVertical className="w-3 h-3 text-zinc-400 hover:text-[#00ffff]" />
                       </button>
                     </div>
                   </div>
@@ -337,55 +377,66 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
               )}
             </div>
 
-            {/* Compositing / Blending Section */}
-            <div className="bg-[#0b0e14] border border-[#1a2230] rounded-md p-3 space-y-2.5">
-              <div className="flex items-center justify-between border-b border-[#161c28] pb-1.5">
+            {/* Compositing / Blending Hardware Module */}
+            <div className="bg-[#09090c] border border-[#27272a] rounded-sm p-3 space-y-3 panel-recessed relative">
+              <div className="absolute top-1.5 left-1.5 rack-screw" />
+              <div className="absolute top-1.5 right-1.5 rack-screw" />
+
+              <div className="flex items-center justify-between border-b border-[#27272a] pb-2 pl-3 pr-3">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCompositingEnabled(!compositingEnabled)}
-                    className={`w-7 h-3.5 rounded-full transition-colors relative cursor-pointer ${
-                      compositingEnabled ? 'bg-[#00f0ff]' : 'bg-zinc-700'
+                    className={`w-7 h-3.5 rounded-xs transition-all relative cursor-pointer border ${
+                      compositingEnabled
+                        ? 'bg-[#00ffff]/20 border-[#00ffff] shadow-[0_0_8px_rgba(0,255,255,0.4)]'
+                        : 'bg-[#18181b] border-zinc-700'
                     }`}
                   >
                     <span
-                      className={`block w-2.5 h-2.5 rounded-full bg-black transition-transform ${
-                        compositingEnabled ? 'translate-x-3.5' : 'translate-x-0.5'
+                      className={`block w-2.5 h-2.5 rounded-xs transition-transform ${
+                        compositingEnabled ? 'translate-x-3.5 bg-[#00ffff]' : 'translate-x-0.5 bg-zinc-500'
                       }`}
                     />
                   </button>
-                  <span className="font-bold text-white text-[11px]">Compositing</span>
+                  <span className="font-sans font-bold text-white text-[11px] tracking-wide uppercase">
+                    Compositing & Blend
+                  </span>
                 </div>
+                <Layers className="w-3.5 h-3.5 text-zinc-500" />
               </div>
 
               {compositingEnabled && (
-                <div className="space-y-2 text-[10px]">
-                  <div className="flex justify-between items-center text-zinc-400">
+                <div className="space-y-3 text-[10px] px-1">
+                  <div className="flex justify-between items-center text-zinc-400 font-sans uppercase tracking-wider text-[10px]">
                     <span>Blend Mode</span>
                     <select
                       value={blendMode}
                       onChange={(e) => setBlendMode(e.target.value as any)}
-                      className="bg-[#0e131b] border border-[#1e2736] text-[#00f0ff] rounded px-2 py-0.5 focus:outline-none"
+                      className="bg-[#050505] border border-[#27272a] text-[#00ffff] font-mono font-bold rounded-xs px-2 py-1 focus:outline-none cursor-pointer"
                     >
                       <option value="normal">Normal</option>
-                      <option value="screen">Screen</option>
+                      <option value="screen">Screen (Additive Glow)</option>
                       <option value="add">Linear Add</option>
-                      <option value="multiply">Multiply</option>
+                      <option value="multiply">Multiply (Shadow)</option>
                     </select>
                   </div>
 
                   <div className="space-y-1">
-                    <div className="flex justify-between text-zinc-400">
-                      <span>Opacity</span>
-                      <span className="text-[#00f0ff] font-bold">{opacity}%</span>
+                    <div className="flex justify-between text-zinc-400 font-sans uppercase tracking-wider text-[10px]">
+                      <span>Master Opacity</span>
+                      <span className="text-[#00ffff] font-mono font-bold">{opacity}%</span>
                     </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={opacity}
-                      onChange={(e) => setOpacity(parseInt(e.target.value))}
-                      className="w-full h-1 bg-[#1c222c] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
-                    />
+                    <div className="relative pt-0.5">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={opacity}
+                        onChange={(e) => setOpacity(parseInt(e.target.value))}
+                        className="w-full h-1.5 bg-[#18181b] rounded-sm appearance-none cursor-pointer accent-[#00ffff] relative z-10"
+                      />
+                      <div className="w-full h-1 mt-1 tick-marks-calibrated opacity-60" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -399,26 +450,33 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
         {/* TAB: TEXT / KINETIC LYRICS */}
         {mainTab === 'text' && (
           <div className="space-y-3">
-            <div className="bg-[#0b0e14] border border-[#1a2230] rounded-md p-3 space-y-3">
-              <div className="flex items-center justify-between border-b border-[#161c28] pb-1.5">
-                <span className="font-bold text-white text-[11px]">Kinetic Typography Engine</span>
-                <span className="text-[9px] text-[#00f0ff] font-bold">WHISPER AI</span>
+            <div className="bg-[#09090c] border border-[#27272a] rounded-sm p-3 space-y-3 panel-recessed relative">
+              <div className="absolute top-1.5 left-1.5 rack-screw" />
+              <div className="absolute top-1.5 right-1.5 rack-screw" />
+
+              <div className="flex items-center justify-between border-b border-[#27272a] pb-2 pl-3 pr-3">
+                <span className="font-sans font-bold text-white text-[11px] tracking-wide uppercase">
+                  Kinetic Typography Engine
+                </span>
+                <span className="text-[9px] font-mono text-[#00ffff] font-bold bg-[#00ffff]/10 px-1.5 py-0.5 rounded border border-[#00ffff]/30">
+                  WHISPER AI
+                </span>
               </div>
 
-              {/* Transcribe Action */}
+              {/* Transcribe Action Button */}
               <button
                 onClick={handleAutoTranscribeInternal}
                 disabled={isTranscribing || !selectedTrack}
-                className={`w-full py-2 border font-mono font-bold text-xs rounded transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`w-full py-2.5 border font-mono font-bold text-xs rounded-xs transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2 ${
                   selectedTrack?.has_lyrics
-                    ? 'bg-[#121f18] hover:bg-[#1a2d24] border-emerald-500/50 text-emerald-400'
-                    : 'bg-[#181326] hover:bg-[#251d3b] border-fuchsia-500/50 text-fuchsia-400 hover:text-white'
+                    ? 'bg-[#10241b] hover:bg-[#163326] border-emerald-500/50 text-emerald-300'
+                    : 'bg-[#1c1328] hover:bg-[#2a1d3d] border-fuchsia-500/50 text-fuchsia-300 hover:text-white'
                 }`}
               >
                 {selectedTrack?.has_lyrics ? (
-                  <Check className="w-3.5 h-3.5" />
+                  <Check className="w-4 h-4 text-emerald-400" />
                 ) : (
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-4 h-4 text-fuchsia-400" />
                 )}
                 <span>
                   {isTranscribing
@@ -430,28 +488,28 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
               </button>
 
               {transcriptionStatus && (
-                <div className="p-2 rounded bg-[#10141f] border border-[#00f0ff]/40 text-[10px] text-[#00f0ff] font-mono leading-tight animate-pulse">
+                <div className="p-2 rounded bg-[#050505] border border-[#00ffff]/40 text-[10px] text-[#00ffff] font-mono leading-tight animate-pulse">
                   {transcriptionStatus}
                 </div>
               )}
 
               {/* Synchronized Word Pills */}
               {activeLyrics && activeLyrics.length > 0 ? (
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex justify-between text-[10px] text-zinc-400">
-                    <span className="font-bold text-zinc-300">Synchronized Words</span>
-                    <span className="text-emerald-400 font-bold">{activeLyrics.length} Events</span>
+                <div className="space-y-2 pt-1">
+                  <div className="flex justify-between text-[10px] font-mono text-zinc-400">
+                    <span className="font-sans font-bold text-zinc-300 uppercase">Synchronized Events</span>
+                    <span className="text-emerald-400 font-bold">{activeLyrics.length} Word Markers</span>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-1 bg-[#07090d] rounded border border-[#18202d]">
+                  <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto p-2 bg-[#050505] rounded-xs border border-[#27272a]">
                     {activeLyrics.map((w, idx) => {
                       const isCurrent = currentTime >= w.start && currentTime <= w.end;
                       return (
                         <span
                           key={idx}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-all border ${
+                          className={`px-2 py-0.5 rounded-xs text-[10px] font-mono transition-all border ${
                             isCurrent
-                              ? 'bg-[#00f0ff] text-black font-bold border-[#00f0ff] shadow-[0_0_8px_#00f0ff]'
-                              : 'bg-[#10141d] text-zinc-300 border-[#1f2736] hover:border-[#00f0ff]/50 hover:text-white'
+                              ? 'bg-[#00ffff] text-black font-bold border-[#00ffff] shadow-[0_0_8px_#00ffff]'
+                              : 'bg-[#111114] text-zinc-300 border-[#27272a] hover:border-[#00ffff]/50 hover:text-white'
                           }`}
                           title={`${w.word} (${w.start.toFixed(2)}s - ${w.end.toFixed(2)}s)`}
                         >
@@ -462,9 +520,9 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
                   </div>
                 </div>
               ) : (
-                <p className="text-[10px] text-zinc-500 leading-relaxed">
-                  No lyrics currently aligned for this track. Click "Auto-Transcribe Vocals" to run Whisper AI.
-                </p>
+                <div className="p-3 bg-[#050505] border border-dashed border-[#27272a] rounded-xs text-[10px] text-zinc-500 font-mono leading-relaxed">
+                  No lyrics currently aligned for this track. Click "Auto-Transcribe Vocals" to run local Whisper AI.
+                </div>
               )}
             </div>
           </div>
@@ -473,46 +531,58 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
         {/* TAB: AUDIO / DSP */}
         {mainTab === 'audio' && (
           <div className="space-y-3">
-            <div className="bg-[#0b0e14] border border-[#1a2230] rounded-md p-3 space-y-2.5 text-[10px]">
-              <span className="font-bold text-white text-[11px] block border-b border-[#161c28] pb-1.5">
-                Acoustic DSP Routing
-              </span>
-              <div className="flex justify-between text-zinc-400">
-                <span>Sampling Rate:</span>
-                <span className="text-[#00f0ff] font-bold">48,000 Hz (Lossless)</span>
+            <div className="bg-[#09090c] border border-[#27272a] rounded-sm p-3 space-y-3 text-[10px] panel-recessed relative">
+              <div className="absolute top-1.5 left-1.5 rack-screw" />
+              <div className="absolute top-1.5 right-1.5 rack-screw" />
+
+              <div className="flex items-center justify-between border-b border-[#27272a] pb-2 pl-3 pr-3">
+                <span className="font-sans font-bold text-white text-[11px] tracking-wide uppercase flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-[#00ffff]" />
+                  Acoustic DSP Routing
+                </span>
+                <span className="text-[9px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                  ONLINE
+                </span>
               </div>
-              <div className="flex justify-between text-zinc-400">
-                <span>Channel Config:</span>
-                <span className="text-zinc-200">2.0 Discrete Stereo</span>
-              </div>
-              <div className="flex justify-between text-zinc-400">
-                <span>Dynamic Range:</span>
-                <span className="text-zinc-200">24-bit PCM / 32-bit Float</span>
-              </div>
-              <div className="flex justify-between text-zinc-400">
-                <span>Hardware Buffer:</span>
-                <span className="text-emerald-400 font-bold">2048 Samples (5.3ms)</span>
+
+              <div className="space-y-2 px-1 font-mono">
+                <div className="flex justify-between text-zinc-400">
+                  <span>Sampling Rate:</span>
+                  <span className="text-[#00ffff] font-bold">48,000 Hz (Lossless)</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Channel Config:</span>
+                  <span className="text-zinc-200">2.0 Discrete Stereo</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Dynamic Range:</span>
+                  <span className="text-zinc-200">24-bit PCM / 32-bit Float</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Hardware Buffer:</span>
+                  <span className="text-emerald-400 font-bold">2048 Samples (5.3ms)</span>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* ─── 4. Filmora Bottom Action Buttons: Reset & Keyframe Panel ─── */}
-      <div className="h-10 bg-[#090c12] border-t border-[#1a2230] px-3 flex items-center justify-between shrink-0">
+      {/* ─── 5. Bottom Action Deck: Reset & Keyframe Panel ─── */}
+      <div className="h-10 bg-[#0e0e11] border-t border-[#27272a] px-3 flex items-center justify-between shrink-0">
         <button
           onClick={handleResetTransform}
-          className="flex items-center gap-1.5 px-3 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-zinc-500 rounded text-[10px] text-zinc-300 hover:text-white transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1 bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] hover:border-zinc-500 rounded-xs text-[10px] font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
         >
           <RotateCcw className="w-2.5 h-2.5" />
-          <span>Reset</span>
+          <span>RESET ALL</span>
         </button>
 
         <button
-          className="flex items-center gap-1.5 px-3 py-1 bg-[#14233a] hover:bg-[#1c3252] border border-[#00f0ff]/40 hover:border-[#00f0ff] rounded text-[10px] text-[#00f0ff] font-bold transition-all shadow-xs cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1 bg-[#112233] hover:bg-[#16304a] border border-[#00ffff]/40 hover:border-[#00ffff] rounded-xs text-[10px] font-mono text-[#00ffff] font-bold transition-all shadow-xs cursor-pointer"
         >
           <Sliders className="w-2.5 h-2.5" />
-          <span>Keyframe Panel</span>
+          <span>KEYFRAME DECK</span>
         </button>
       </div>
     </div>

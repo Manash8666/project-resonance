@@ -158,6 +158,63 @@ const App: React.FC = () => {
     audioEngine.seek(timeInSeconds);
   };
 
+  // ── Global NLE Keyboard Shortcuts ──
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+        return;
+      }
+
+      // Ctrl+E / Cmd+E: Trigger Video Export Modal
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        setExportModalOpen(true);
+        return;
+      }
+
+      switch (e.code) {
+        case 'Space':
+        case 'KeyK':
+          e.preventDefault();
+          void handleTogglePlay();
+          break;
+        case 'KeyJ':
+          e.preventDefault();
+          handleSeek(Math.max(0, useResonanceStore.getState().currentTime - 5));
+          break;
+        case 'KeyL':
+          e.preventDefault();
+          handleSeek(Math.min(useResonanceStore.getState().duration || 60, useResonanceStore.getState().currentTime + 5));
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          handleSeek(Math.max(0, useResonanceStore.getState().currentTime - 1));
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          handleSeek(Math.min(useResonanceStore.getState().duration || 60, useResonanceStore.getState().currentTime + 1));
+          break;
+        case 'KeyF':
+          e.preventDefault();
+          setIsImmersive(!isImmersive);
+          break;
+        case 'Escape':
+          if (isImmersive) {
+            e.preventDefault();
+            setIsImmersive(false);
+          } else if (isExportModalOpen) {
+            e.preventDefault();
+            setExportModalOpen(false);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedTrack, isImmersive, isExportModalOpen]);
+
   return (
     <div className="h-screen w-screen bg-[#07090d] text-zinc-100 flex flex-col overflow-hidden font-mono select-none relative">
       {/* 1. Header Bar (Top Dual-Tier Bar: Menus + Module Ribbon) */}

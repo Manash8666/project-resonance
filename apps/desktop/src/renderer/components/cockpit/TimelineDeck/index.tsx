@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 import { audioEngine } from '../../../audio/AudioEngine.js';
-import type { Track } from '../../../types/track.js';
 
 export interface TimelineDeckProps {
   onTogglePlay?: () => void;
@@ -38,15 +37,16 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
   const activeLyrics = useResonanceStore((s) => s.activeLyrics);
   const seekTo = useResonanceStore((s) => s.seekTo);
 
-  const [zoomLevel, setZoomLevel] = useState<number>(1); // 1x to 3x zoom
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isLyricsMuted, setIsLyricsMuted] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [activeTool, setActiveTool] = useState<'select' | 'split' | 'text'>('select');
+  const [snappingEnabled, setSnappingEnabled] = useState(true);
 
   const timelineContainerRef = useRef<HTMLDivElement>(null);
 
-  const effectiveDuration = duration > 0 ? duration : 60; // fallback 60s
+  const effectiveDuration = duration > 0 ? duration : 60;
   const progressPercent = Math.min(100, Math.max(0, (currentTime / effectiveDuration) * 100));
 
   const formatTimecode = (seconds: number): string => {
@@ -58,7 +58,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
   };
 
-  // Generate ruler tick marks (every 5s or 15s depending on duration and zoom)
+  // Generate ruler tick marks
   const rulerTicks = useMemo(() => {
     const ticks: { time: number; label: string; percent: number }[] = [];
     const step = effectiveDuration <= 60 ? 5 : effectiveDuration <= 180 ? 15 : 30;
@@ -74,7 +74,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
     return ticks;
   }, [effectiveDuration]);
 
-  // Handle click or drag on timeline to seek
+  // Handle timeline seek
   const handleTimelineInteraction = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!timelineContainerRef.current) return;
     const rect = timelineContainerRef.current.getBoundingClientRect();
@@ -89,37 +89,36 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
     }
   };
 
-  // Sample waveform peaks for audio track rendering
+  // High-density waveform peaks
   const peaks: number[] = useMemo(() => {
     if (selectedTrack?.waveform_peaks) {
       try {
         const parsed = Array.isArray(selectedTrack.waveform_peaks)
           ? selectedTrack.waveform_peaks
           : JSON.parse(selectedTrack.waveform_peaks);
-        if (Array.isArray(parsed)) return parsed.map((x: unknown) => Number(x) || 0);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map((x: unknown) => Number(x) || 0);
       } catch {
-        // Fallback
+        // Fallback to synthetic
       }
     }
-    // Deterministic pseudo-peaks
     const synth: number[] = [];
-    const seed = (selectedTrack?.id || 1) * 17;
-    for (let i = 0; i < 120; i++) {
-      const v = 0.2 + 0.7 * Math.abs(Math.sin((i + seed) * 0.18) * Math.cos(i * 0.32));
+    const seed = (selectedTrack?.id || 1) * 19;
+    for (let i = 0; i < 140; i++) {
+      const v = 0.15 + 0.75 * Math.abs(Math.sin((i + seed) * 0.17) * Math.cos(i * 0.29));
       synth.push(parseFloat(v.toFixed(3)));
     }
     return synth;
   }, [selectedTrack?.id, selectedTrack?.waveform_peaks]);
 
   return (
-    <div className="flex flex-col h-full bg-[#07090d] border-t border-[#1a2230] font-mono select-none overflow-hidden text-xs">
-      {/* ─── 1. Filmora-Style Timeline Action Toolbar ─── */}
-      <div className="h-9 bg-[#0b0e14] border-b border-[#1c2433] px-3 flex items-center justify-between shrink-0 text-zinc-400">
+    <div className="flex flex-col h-full bg-[#050505] border-t border-[#27272a] font-mono select-none overflow-hidden text-xs">
+      {/* ─── 1. Precision NLE Timeline Toolbar ─── */}
+      <div className="h-9 bg-[#09090c] border-b border-[#27272a] px-3 flex items-center justify-between shrink-0 text-zinc-400">
         {/* Left Editing Tools */}
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            className="p-1.5 rounded hover:bg-[#161d2b] hover:text-[#00f0ff] transition-colors cursor-pointer"
+            className="p-1.5 rounded-xs hover:bg-[#18181b] hover:text-[#00ffff] transition-colors cursor-pointer"
             title="Grid Modes"
           >
             <Grid className="w-3.5 h-3.5" />
@@ -128,10 +127,10 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
           <button
             type="button"
             onClick={() => setActiveTool('select')}
-            className={`p-1.5 rounded transition-colors cursor-pointer ${
+            className={`p-1.5 rounded-xs transition-all cursor-pointer border ${
               activeTool === 'select'
-                ? 'bg-[#14233a] text-[#00f0ff] border border-[#00f0ff]/40 shadow-xs'
-                : 'hover:bg-[#161d2b] hover:text-white'
+                ? 'bg-[#18181b] text-[#00ffff] border-[#00ffff]/50 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
+                : 'border-transparent hover:bg-[#18181b] hover:text-white'
             }`}
             title="Selection Tool (V)"
           >
@@ -141,10 +140,10 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
           <button
             type="button"
             onClick={() => setActiveTool('split')}
-            className={`p-1.5 rounded transition-colors cursor-pointer ${
+            className={`p-1.5 rounded-xs transition-all cursor-pointer border ${
               activeTool === 'split'
-                ? 'bg-[#14233a] text-[#00f0ff] border border-[#00f0ff]/40 shadow-xs'
-                : 'hover:bg-[#161d2b] hover:text-white'
+                ? 'bg-[#18181b] text-[#00ffff] border-[#00ffff]/50 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
+                : 'border-transparent hover:bg-[#18181b] hover:text-white'
             }`}
             title="Split Razor (C)"
           >
@@ -153,51 +152,55 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
 
           <button
             type="button"
-            className="p-1.5 rounded hover:bg-[#161d2b] hover:text-red-400 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xs hover:bg-[#18181b] hover:text-red-400 transition-colors cursor-pointer"
             title="Delete Selected Clip (Del)"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
 
-          <div className="h-4 w-px bg-[#1e2736] mx-1" />
+          <div className="h-4 w-px bg-[#27272a] mx-1" />
 
-          {/* Quick Add Text */}
+          {/* Title Layer */}
           <button
             type="button"
             onClick={() => setActiveTool('text')}
-            className="px-2 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-[#00f0ff]/50 rounded text-[10px] text-zinc-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
+            className={`px-2 py-1 rounded-xs border text-[10px] font-sans font-semibold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+              activeTool === 'text'
+                ? 'bg-[#18181b] border-[#00ffff]/50 text-[#00ffff]'
+                : 'bg-[#111114] border-[#27272a] text-zinc-300 hover:text-white hover:border-[#00ffff]/40'
+            }`}
             title="Add Kinetic Typography Layer"
           >
-            <Type className="w-3 h-3 text-[#00f0ff]" />
-            <span>Title</span>
+            <Type className="w-3 h-3 text-[#00ffff]" />
+            <span>TITLE</span>
           </button>
 
-          {/* AI Transcribe Trigger */}
+          {/* AI Whisper STT Sync */}
           <button
             type="button"
-            className="px-2 py-1 bg-[#121f18] hover:bg-[#182d22] border border-emerald-500/40 rounded text-[10px] text-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer"
-            title="AI Whisper Speech-To-Text Sync"
+            className="px-2 py-1 bg-[#10241b] hover:bg-[#163326] border border-emerald-500/40 rounded-xs text-[10px] font-sans font-semibold tracking-wider text-emerald-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+            title="Whisper AI Speech-To-Text Sync"
           >
-            <Sparkles className="w-3 h-3" />
-            <span>Whisper</span>
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            <span>WHISPER</span>
           </button>
 
           <button
             type="button"
-            className="p-1.5 rounded hover:bg-[#161d2b] hover:text-[#00f0ff] transition-colors cursor-pointer"
+            className="p-1.5 rounded-xs hover:bg-[#18181b] hover:text-[#00ffff] transition-colors cursor-pointer"
             title="Add Marker (M)"
           >
             <Flag className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Center Current Timecode Display with Quick Play/Pause Button */}
+        {/* Center SMPTE Timecode & Quick Play Toggle */}
         <div className="flex items-center gap-2">
           {onTogglePlay && (
             <button
               type="button"
               onClick={onTogglePlay}
-              className="p-1.5 rounded bg-[#10141d] hover:bg-[#182335] text-[#00f0ff] border border-[#1e2736] hover:border-[#00f0ff]/50 transition-colors cursor-pointer flex items-center justify-center shadow-xs"
+              className="p-1.5 rounded-xs bg-[#111114] hover:bg-[#18181b] text-[#00ffff] border border-[#27272a] hover:border-[#00ffff]/50 transition-all cursor-pointer flex items-center justify-center shadow-xs"
               title={isPlaying ? 'Pause Audio (Space)' : 'Play Audio (Space)'}
             >
               {isPlaying ? (
@@ -208,29 +211,32 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             </button>
           )}
 
-          <div className="flex items-center gap-2 bg-[#06080c] px-3 py-1 rounded border border-[#1a2230]">
-            <span className="text-[#00f0ff] font-bold tracking-wider text-xs">
+          <div className="flex items-center gap-2 bg-[#050505] px-3 py-1 rounded-xs border border-[#27272a] shadow-inner">
+            <span className="text-[#00ffff] font-mono font-bold tracking-wider text-xs">
               {formatTimecode(currentTime)}
             </span>
-            <span className="text-zinc-600">/</span>
-            <span className="text-zinc-500 text-xs">
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="text-zinc-500 font-mono text-xs">
               {formatTimecode(effectiveDuration)}
             </span>
           </div>
         </div>
 
-        {/* Right Controls: Snapping & Zoom Slider */}
+        {/* Right Snapping & Zoom Controls */}
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="p-1 text-zinc-400 hover:text-[#00f0ff] transition-colors cursor-pointer"
-            title="Magnet Snapping Toggle"
+            onClick={() => setSnappingEnabled(!snappingEnabled)}
+            className={`p-1.5 rounded-xs transition-colors cursor-pointer ${
+              snappingEnabled ? 'text-[#00ffff] bg-[#00ffff]/10' : 'text-zinc-600 hover:text-zinc-400'
+            }`}
+            title={snappingEnabled ? 'Magnet Snapping ON' : 'Magnet Snapping OFF'}
           >
             <Magnet className="w-3.5 h-3.5" />
           </button>
 
-          {/* Zoom Slider */}
-          <div className="flex items-center gap-1.5 bg-[#0e121a] border border-[#1c2433] rounded px-2 py-1">
+          {/* Calibrated Zoom Slider */}
+          <div className="flex items-center gap-1.5 bg-[#09090c] border border-[#27272a] rounded-xs px-2 py-1">
             <ZoomOut className="w-3 h-3 text-zinc-500" />
             <input
               type="range"
@@ -239,35 +245,41 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
               step={0.1}
               value={zoomLevel}
               onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
-              className="w-16 h-1 bg-[#1e2738] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
+              className="w-16 h-1 bg-[#18181b] rounded-sm appearance-none cursor-pointer accent-[#00ffff]"
               title="Timeline Zoom Level"
             />
             <ZoomIn className="w-3 h-3 text-zinc-500" />
+            <span className="text-[9px] font-mono text-zinc-500 ml-0.5 w-6 text-right">
+              {zoomLevel.toFixed(1)}x
+            </span>
           </div>
         </div>
       </div>
 
       {/* ─── 2. Multi-Track Timeline Workspace ─── */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Track Headers Column (Fixed Width: 140px) */}
-        <div className="w-36 bg-[#090c12] border-r border-[#1a2230] flex flex-col shrink-0 text-[11px] font-mono z-20">
+        {/* Left Track Headers (Fixed Width: 140px) */}
+        <div className="w-[140px] bg-[#09090c] border-r border-[#27272a] flex flex-col shrink-0 text-[11px] font-mono z-20">
           {/* Header Spacer (matches Ruler height) */}
-          <div className="h-6 bg-[#0a0d14] border-b border-[#1a2230] flex items-center px-2 text-[9px] text-zinc-500 font-bold tracking-wider">
-            TRACKS
+          <div className="h-6 bg-[#0e0e11] border-b border-[#27272a] flex items-center justify-between px-2 text-[9px] text-zinc-500 font-bold tracking-widest uppercase">
+            <span>TRACKS</span>
+            <div className="rack-screw" />
           </div>
 
-          {/* Track 1: Video (Shader) */}
-          <div className="h-16 border-b border-[#18202d] px-2.5 flex items-center justify-between bg-[#0b0e15]">
+          {/* Track 1: Video 1 (Shader Engine) */}
+          <div className="h-16 border-b border-[#1c1c20] px-2.5 flex items-center justify-between bg-[#0a0a0c]">
             <div className="flex items-center gap-1.5">
-              <Video className="w-3.5 h-3.5 text-[#00f0ff]" />
-              <span className="font-bold text-zinc-300">Video 1</span>
+              <span className="px-1 py-0.2 rounded-xs bg-[#00ffff]/10 border border-[#00ffff]/30 text-[#00ffff] font-mono text-[9px] font-bold">
+                V1
+              </span>
+              <span className="font-sans font-bold text-zinc-300 text-[11px]">Video 1</span>
             </div>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsVideoMuted(!isVideoMuted)}
                 className={`p-1 rounded cursor-pointer transition-colors ${
-                  isVideoMuted ? 'text-zinc-600' : 'text-[#00f0ff]'
+                  isVideoMuted ? 'text-zinc-600' : 'text-[#00ffff]'
                 }`}
                 title="Toggle Visibility"
               >
@@ -277,11 +289,13 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             </div>
           </div>
 
-          {/* Track 2: Lyrics (Kinetic Typography) */}
-          <div className="h-14 border-b border-[#18202d] px-2.5 flex items-center justify-between bg-[#0b0e15]">
+          {/* Track 2: Kinetic 1 (Lyrics) */}
+          <div className="h-14 border-b border-[#1c1c20] px-2.5 flex items-center justify-between bg-[#0a0a0c]">
             <div className="flex items-center gap-1.5">
-              <Type className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-bold text-zinc-300">Kinetic 1</span>
+              <span className="px-1 py-0.2 rounded-xs bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-[9px] font-bold">
+                K1
+              </span>
+              <span className="font-sans font-bold text-zinc-300 text-[11px]">Kinetic 1</span>
             </div>
             <div className="flex items-center gap-1.5">
               <button
@@ -298,11 +312,13 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             </div>
           </div>
 
-          {/* Track 3: Audio (Master Waveform) */}
-          <div className="h-16 border-b border-[#18202d] px-2.5 flex items-center justify-between bg-[#0b0e15]">
+          {/* Track 3: Audio 1 (Lossless Waveform) */}
+          <div className="h-16 border-b border-[#1c1c20] px-2.5 flex items-center justify-between bg-[#0a0a0c]">
             <div className="flex items-center gap-1.5">
-              <Music className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-bold text-zinc-300">Audio 1</span>
+              <span className="px-1 py-0.2 rounded-xs bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[9px] font-bold">
+                A1
+              </span>
+              <span className="font-sans font-bold text-zinc-300 text-[11px]">Audio 1</span>
             </div>
             <div className="flex items-center gap-1.5">
               <button
@@ -320,11 +336,11 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
           </div>
         </div>
 
-        {/* Right Timeline Canvas (Ruler + Tracks Area + Draggable Playhead) */}
+        {/* Right Timeline Canvas (Ruler + Track Lanes + Playhead) */}
         <div
           ref={timelineContainerRef}
           onClick={handleTimelineInteraction}
-          className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden relative bg-[#06080b] cursor-pointer"
+          className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden relative bg-[#050505] cursor-pointer"
         >
           {/* Inner Scaled Canvas based on zoomLevel */}
           <div
@@ -332,7 +348,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             style={{ width: `${100 * zoomLevel}%`, minWidth: '100%' }}
           >
             {/* ─── A. Timeline Time Ruler ─── */}
-            <div className="h-6 bg-[#080b10] border-b border-[#1a2230] relative flex items-center overflow-hidden">
+            <div className="h-6 bg-[#09090c] border-b border-[#27272a] relative flex items-center overflow-hidden">
               {rulerTicks.map((tick, i) => (
                 <div
                   key={i}
@@ -342,62 +358,60 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
                   <span className="text-[9px] text-zinc-500 font-mono tracking-tighter pl-1">
                     {tick.label}
                   </span>
-                  <div className="w-px h-2 bg-[#20293a]" />
+                  <div className="w-px h-2 bg-[#27272a]" />
                 </div>
               ))}
             </div>
 
-            {/* ─── B. Track 1 Clip: 3D WebGL Shader Video Stream ─── */}
-            <div className="h-16 border-b border-[#141b26] relative p-1">
+            {/* ─── B. Track 1: 3D WebGL Shader Video Clip ─── */}
+            <div className="h-16 border-b border-[#18181b] relative p-1">
               <div
-                className={`h-full rounded-md border flex items-center px-3 relative overflow-hidden shadow-sm transition-all ${
+                className={`h-full rounded-xs border flex items-center px-3 relative overflow-hidden shadow-sm transition-all ${
                   isVideoMuted
-                    ? 'opacity-30 bg-[#121620] border-zinc-700'
-                    : 'bg-gradient-to-r from-[#0d1e33] via-[#102947] to-[#0c1a2c] border-[#00f0ff]/50 shadow-[0_0_12px_rgba(0,240,255,0.12)]'
+                    ? 'opacity-30 bg-[#111114] border-zinc-700'
+                    : 'bg-gradient-to-r from-[#071321] via-[#0d2138] to-[#081524] border-[#00ffff]/40 shadow-[0_0_12px_rgba(0,255,255,0.12)]'
                 }`}
                 style={{ width: '100%' }}
               >
-                {/* Mini Filmstrip Notch Decoration */}
-                <div className="absolute top-1 left-2 flex gap-1 pointer-events-none opacity-40">
-                  <div className="w-2 h-1.5 bg-black/50 rounded-xs" />
-                  <div className="w-2 h-1.5 bg-black/50 rounded-xs" />
-                  <div className="w-2 h-1.5 bg-black/50 rounded-xs" />
+                {/* Filmstrip sprocket notch decoration */}
+                <div className="absolute top-1 left-2 flex gap-1.5 pointer-events-none opacity-40">
+                  <div className="w-2.5 h-1.5 bg-black/60 rounded-xs border border-white/10" />
+                  <div className="w-2.5 h-1.5 bg-black/60 rounded-xs border border-white/10" />
+                  <div className="w-2.5 h-1.5 bg-black/60 rounded-xs border border-white/10" />
                 </div>
                 <div className="flex items-center gap-2 z-10">
-                  <span className="text-[11px] font-bold text-white tracking-wide truncate">
+                  <Video className="w-3 h-3 text-[#00ffff]" />
+                  <span className="text-[11px] font-sans font-bold text-white tracking-wide truncate">
                     {selectedTrack ? selectedTrack.album_name || 'Cybernetic Soundscape' : '3D WebGL Shader Output'}
                   </span>
-                  <span className="text-[9px] text-[#00f0ff] bg-[#00f0ff]/15 px-1.5 py-0.2 rounded border border-[#00f0ff]/30">
+                  <span className="text-[9px] font-mono text-[#00ffff] bg-[#00ffff]/15 px-1.5 py-0.2 rounded-xs border border-[#00ffff]/30">
                     60FPS
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* ─── C. Track 2 Clip: Kinetic Lyrics Stream (Filmora 10 items badge) ─── */}
-            <div className="h-14 border-b border-[#141b26] relative p-1">
+            {/* ─── C. Track 2: Kinetic Lyrics Stream ─── */}
+            <div className="h-14 border-b border-[#18181b] relative p-1">
               {activeLyrics && activeLyrics.length > 0 ? (
-                /* Aligned Filmora-style Lyric Container Badge */
                 <div
-                  className={`h-full rounded-md border flex items-center px-3 relative shadow-md transition-all ${
+                  className={`h-full rounded-xs border flex items-center px-3 relative shadow-md transition-all ${
                     isLyricsMuted
-                      ? 'opacity-30 bg-[#1a1424] border-zinc-700'
-                      : 'bg-gradient-to-r from-[#1b152b] via-[#241a3d] to-[#1a1428] border-fuchsia-500/50 shadow-[0_0_12px_rgba(217,70,239,0.15)]'
+                      ? 'opacity-30 bg-[#161021] border-zinc-700'
+                      : 'bg-gradient-to-r from-[#170e24] via-[#24153b] to-[#180e26] border-fuchsia-500/40 shadow-[0_0_12px_rgba(217,70,239,0.15)]'
                   }`}
-                  style={{ width: '92%' }}
+                  style={{ width: '94%' }}
                 >
-                  {/* Filmora Reference Highlight: Red bordered badge */}
-                  <div className="px-2.5 py-1 bg-[#100d1c] border border-red-500 rounded text-[10px] text-white font-bold flex items-center gap-1.5 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                    <span>{activeLyrics.length} kinetic words synchronized</span>
+                  <div className="px-2.5 py-1 bg-[#0d0717] border border-amber-500/60 rounded-xs text-[10px] text-amber-300 font-mono font-bold flex items-center gap-1.5 shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    <span>{activeLyrics.length} kinetic word events</span>
                   </div>
 
-                  {/* Words Preview Chips */}
                   <div className="flex items-center gap-1.5 ml-3 overflow-hidden">
                     {activeLyrics.slice(0, 8).map((w, idx) => (
                       <span
                         key={idx}
-                        className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 border border-fuchsia-500/30 text-fuchsia-300"
+                        className="text-[9px] font-mono px-1.5 py-0.5 rounded-xs bg-black/50 border border-fuchsia-500/30 text-fuchsia-300"
                       >
                         {w.word}
                       </span>
@@ -408,27 +422,24 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
                   </div>
                 </div>
               ) : selectedTrack ? (
-                /* Aligned Filmora-style Lyric Container Badge with 10 synchronized word events */
                 <div
-                  className={`h-full rounded-md border flex items-center px-3 relative shadow-md transition-all ${
+                  className={`h-full rounded-xs border flex items-center px-3 relative shadow-md transition-all ${
                     isLyricsMuted
-                      ? 'opacity-30 bg-[#1a1424] border-zinc-700'
-                      : 'bg-gradient-to-r from-[#1b152b] via-[#241a3d] to-[#1a1428] border-fuchsia-500/50 shadow-[0_0_12px_rgba(217,70,239,0.15)]'
+                      ? 'opacity-30 bg-[#161021] border-zinc-700'
+                      : 'bg-gradient-to-r from-[#170e24] via-[#24153b] to-[#180e26] border-fuchsia-500/40 shadow-[0_0_12px_rgba(217,70,239,0.15)]'
                   }`}
-                  style={{ width: '82%' }}
+                  style={{ width: '88%' }}
                 >
-                  {/* Filmora Reference Highlight: Red bordered badge */}
-                  <div className="px-2.5 py-1 bg-[#100d1c] border border-red-500 rounded text-[10px] text-white font-bold flex items-center gap-1.5 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                  <div className="px-2.5 py-1 bg-[#0d0717] border border-amber-500/60 rounded-xs text-[10px] text-amber-300 font-mono font-bold flex items-center gap-1.5 shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                     <span>10 kinetic words synchronized</span>
                   </div>
 
-                  {/* Words Preview Chips */}
                   <div className="flex items-center gap-1.5 ml-3 overflow-hidden">
                     {['JOURNEY', 'HORIZON', 'VELOCITY', 'PULSE', 'ECHO', 'DEEP'].map((w, idx) => (
                       <span
                         key={idx}
-                        className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 border border-fuchsia-500/30 text-fuchsia-300"
+                        className="text-[9px] font-mono px-1.5 py-0.5 rounded-xs bg-black/50 border border-fuchsia-500/30 text-fuchsia-300"
                       >
                         {w}
                       </span>
@@ -437,52 +448,56 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
                   </div>
                 </div>
               ) : (
-                <div className="h-full rounded-md border border-dashed border-[#1e2533] bg-[#0a0d14]/40 flex items-center px-4 text-zinc-600 text-[10px]">
-                  No kinetic lyrics track engaged. Select a track or run Whisper AI to generate synchronized word events.
+                <div className="h-full rounded-xs border border-dashed border-[#27272a] bg-[#09090c]/40 flex items-center px-4 text-zinc-600 text-[10px] font-mono">
+                  No kinetic lyrics track engaged. Run Whisper AI to generate synchronized events.
                 </div>
               )}
             </div>
 
-            {/* ─── D. Track 3 Clip: Lossless Audio Waveform Peaks ─── */}
-            <div className="h-16 border-b border-[#141b26] relative p-1">
+            {/* ─── D. Track 3: Lossless Audio Waveform Peaks ─── */}
+            <div className="h-16 border-b border-[#18181b] relative p-1">
               <div
-                className={`h-full rounded-md border flex items-center px-2 relative overflow-hidden transition-all ${
+                className={`h-full rounded-xs border flex items-center px-2 relative overflow-hidden transition-all ${
                   isAudioMuted
-                    ? 'opacity-30 bg-[#121a16] border-zinc-700'
-                    : 'bg-gradient-to-r from-[#0c1815] via-[#0f2420] to-[#0a1614] border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.12)]'
+                    ? 'opacity-30 bg-[#101915] border-zinc-700'
+                    : 'bg-gradient-to-r from-[#06120e] via-[#091a14] to-[#06120e] border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.12)]'
                 }`}
                 style={{ width: '100%' }}
               >
-                {/* Embedded High-Res Waveform Peaks */}
-                <div className="w-full h-full flex items-center gap-0.5 py-1.5 opacity-80">
-                  {peaks.map((p: number, i: number) => (
-                    <div
-                      key={i}
-                      className="flex-1 bg-emerald-400/80 rounded-xs transition-all duration-75"
-                      style={{
-                        height: `${Math.max(12, p * 100)}%`,
-                        backgroundColor:
-                          (i / peaks.length) * 100 <= progressPercent ? '#00f0ff' : '#10b981',
-                      }}
-                    />
-                  ))}
+                {/* Embedded High-Res Waveform Peaks with Cyan / Emerald Split Coloring */}
+                <div className="w-full h-full flex items-center gap-0.5 py-1.5 opacity-90">
+                  {peaks.map((p: number, i: number) => {
+                    const isPlayed = (i / peaks.length) * 100 <= progressPercent;
+                    return (
+                      <div
+                        key={i}
+                        className="flex-1 rounded-xs transition-colors duration-75"
+                        style={{
+                          height: `${Math.max(12, p * 100)}%`,
+                          backgroundColor: isPlayed ? '#00ffff' : '#10b981',
+                          boxShadow: isPlayed ? '0 0 4px rgba(0, 255, 255, 0.4)' : 'none',
+                        }}
+                      />
+                    );
+                  })}
                 </div>
 
-                <div className="absolute bottom-1 left-3 text-[9px] font-mono text-zinc-400 bg-black/60 px-1.5 py-0.2 rounded border border-zinc-800">
-                  {selectedTrack ? selectedTrack.title || selectedTrack.file_name : 'No Audio Track'}
+                <div className="absolute bottom-1 left-3 text-[9px] font-mono text-zinc-300 bg-black/75 px-1.5 py-0.2 rounded-xs border border-zinc-800 flex items-center gap-1.5">
+                  <Music className="w-2.5 h-2.5 text-emerald-400" />
+                  <span>{selectedTrack ? selectedTrack.title || selectedTrack.file_name : 'No Audio Track'}</span>
                 </div>
               </div>
             </div>
 
-            {/* ─── E. Synchronized Red Playhead Needle ─── */}
+            {/* ─── E. Synchronized Cyan Playhead Scrubber Needle ─── */}
             <div
               className="absolute top-0 bottom-0 pointer-events-none z-30 transition-all duration-75 ease-linear"
               style={{ left: `${progressPercent}%` }}
             >
-              {/* Playhead Diamond Scrubber Head */}
-              <div className="w-3.5 h-3.5 -ml-[7px] -mt-0.5 bg-[#e81123] rotate-45 shadow-[0_0_8px_#e81123] border border-white/60" />
+              {/* Playhead Inverted Triangle / Diamond Head */}
+              <div className="w-3.5 h-3.5 -ml-[7px] -mt-0.5 bg-[#00ffff] rotate-45 shadow-[0_0_10px_#00ffff] border border-white" />
               {/* Vertical Playhead Wire */}
-              <div className="w-0.5 h-full bg-[#e81123] shadow-[0_0_6px_#e81123]" />
+              <div className="w-0.5 h-full bg-[#00ffff] shadow-[0_0_8px_rgba(0,255,255,0.8)]" />
             </div>
           </div>
         </div>
