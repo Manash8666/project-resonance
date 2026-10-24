@@ -80,8 +80,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1.5 text-xs text-zinc-500 hover:text-white"
+              className="absolute right-2 top-0 bottom-0 flex items-center px-1.5 text-xs text-zinc-500 hover:text-[#00f0ff] cursor-pointer transition-colors"
+              title="Clear search query"
             >
               ✕
             </button>

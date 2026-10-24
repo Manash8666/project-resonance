@@ -132,13 +132,18 @@ export class AudioEngine {
    * Loads a track by file path using the strictly formatted file:/// protocol.
    */
   public async loadTrack(filePath: string): Promise<void> {
-    // 1. Convert Windows backslashes to forward slashes
-    const formattedPath = filePath.replace(/\\/g, '/');
-    
-    // 2. Construct a valid file:/// URL (Three slashes for drive letters e.g. file:///E:/...)
-    const fileUrl = formattedPath.startsWith('/')
-      ? `file://${formattedPath}`
-      : `file:///${formattedPath}`;
+    let fileUrl: string;
+    if (filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('data:') || filePath.startsWith('blob:')) {
+      fileUrl = filePath;
+    } else {
+      // 1. Convert Windows backslashes to forward slashes
+      const formattedPath = filePath.replace(/\\/g, '/');
+      
+      // 2. Construct a valid file:/// URL (Three slashes for drive letters e.g. file:///E:/...)
+      fileUrl = formattedPath.startsWith('/')
+        ? `file://${formattedPath}`
+        : `file:///${formattedPath}`;
+    }
 
     console.log("Loading Audio Source:", fileUrl); // Diagnostic log
     
