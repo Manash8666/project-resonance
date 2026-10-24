@@ -38,6 +38,19 @@ const ALLOWED_AUDIO_EXTENSIONS = new Set([
 
 // ─── Window ───────────────────────────────────────────────────────────────────
 
+function getRendererPath(): string {
+  const candidates = [
+    path.join(__dirname, '../renderer/index.html'),
+    path.join(__dirname, '../../renderer/index.html'),
+    path.join(app.getAppPath(), 'dist/renderer/index.html'),
+    path.join(app.getAppPath(), 'renderer/index.html'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -72,7 +85,10 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../../renderer/index.html'));
+    const indexPath = getRendererPath();
+    console.log('[Resonance] Loading production UI from:', indexPath);
+    mainWindow.loadFile(indexPath);
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 }
 
@@ -172,9 +188,10 @@ function registerHandlers(): void {
       assembler.writeFrame(rawBuffer);
     });
 
+    const indexPath = getRendererPath();
     const renderUrl = isDev
       ? `http://localhost:5173?mode=render&audio=${encodeURIComponent(settings.audioPath)}`
-      : `file://${path.join(__dirname, '../../renderer/index.html')}?mode=render&audio=${encodeURIComponent(settings.audioPath)}`;
+      : `${pathToFileURL(indexPath).toString()}?mode=render&audio=${encodeURIComponent(settings.audioPath)}`;
 
     await renderWindow.loadURL(renderUrl);
 

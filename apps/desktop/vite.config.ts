@@ -6,6 +6,7 @@ import path from 'path';
 // Vite config for the renderer process only.
 // The main process (Electron) is compiled separately via tsc.
 export default defineConfig({
+  base: './',
   plugins: [react(), tailwindcss()],
   root: path.resolve(import.meta.dirname, 'src/renderer'),
   publicDir: path.resolve(import.meta.dirname, 'public'),
