@@ -88,7 +88,7 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
   return (
     <div className="h-16 bg-[#0a0c10] border-t border-[#1c222c] flex items-center justify-between px-5 font-mono select-none z-30">
       {/* Left: Play/Pause & Now Playing Info */}
-      <div className="flex items-center space-x-4 w-72">
+      <div className="flex items-center gap-3 w-72">
         <button
           onClick={handleTogglePlay}
           className="w-10 h-10 rounded-full bg-[#121620] hover:bg-[#1c2333] border border-[#232b3b] hover:border-[#00f0ff] flex items-center justify-center text-[#00f0ff] cursor-pointer transition-all shadow-md active:scale-95 shrink-0"
@@ -111,7 +111,7 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
       </div>
 
       {/* Center: Timeline Scrubber with Embedded Waveform Preview */}
-      <div className="flex-1 max-w-2xl flex items-center space-x-3 text-xs text-zinc-400 px-4">
+      <div className="flex-1 max-w-2xl flex items-center gap-3 text-xs text-zinc-400 px-4">
         <span className="w-10 text-right">{formatSeconds(currentTime)}</span>
         <div className="relative flex-1 flex items-center h-10">
           {/* Cybernetic Waveform Preview Track Behind Slider */}
@@ -133,12 +133,12 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
       </div>
 
       {/* Right: Macro Bands LED VU Meters & Volume */}
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center gap-4">
         {/* 3-Band RMS LED VU Meters */}
-        <div className="flex items-center space-x-3 text-[10px]">
-          <div className="flex flex-col items-center space-y-1">
-            <span className="text-zinc-500 font-bold">SUB</span>
-            <div className="w-3 h-8 bg-[#121620] rounded-xs border border-[#1e2533] flex flex-col justify-end p-0.5">
+        <div className="flex items-center gap-1.5 bg-[#080b10] border border-[#1b2230] rounded px-2.5 py-1 text-[9px] font-mono shadow-inner">
+          <div className="flex flex-col items-center w-8 gap-1">
+            <span className="text-zinc-400 font-bold tracking-wider">SUB</span>
+            <div className="w-2.5 h-6 bg-[#121620] rounded-xs border border-[#1e2533] flex flex-col justify-end p-0.5">
               <div
                 className="w-full bg-cyan-400 rounded-xs transition-all duration-75"
                 style={{ height: `${Math.min(100, Math.round(bands.bass * 100))}%` }}
@@ -146,9 +146,11 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-col items-center space-y-1">
-            <span className="text-zinc-500 font-bold">MID</span>
-            <div className="w-3 h-8 bg-[#121620] rounded-xs border border-[#1e2533] flex flex-col justify-end p-0.5">
+          <div className="w-px h-7 bg-[#1c2433] mx-0.5" />
+
+          <div className="flex flex-col items-center w-8 gap-1">
+            <span className="text-zinc-400 font-bold tracking-wider">MID</span>
+            <div className="w-2.5 h-6 bg-[#121620] rounded-xs border border-[#1e2533] flex flex-col justify-end p-0.5">
               <div
                 className="w-full bg-yellow-400 rounded-xs transition-all duration-75"
                 style={{ height: `${Math.min(100, Math.round(bands.mid * 100))}%` }}
@@ -156,9 +158,11 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-col items-center space-y-1">
-            <span className="text-zinc-500 font-bold">AIR</span>
-            <div className="w-3 h-8 bg-[#121620] rounded-xs border border-[#1e2533] flex flex-col justify-end p-0.5">
+          <div className="w-px h-7 bg-[#1c2433] mx-0.5" />
+
+          <div className="flex flex-col items-center w-8 gap-1">
+            <span className="text-zinc-400 font-bold tracking-wider">AIR</span>
+            <div className="w-2.5 h-6 bg-[#121620] rounded-xs border border-[#1e2533] flex flex-col justify-end p-0.5">
               <div
                 className="w-full bg-magenta-400 rounded-xs transition-all duration-75"
                 style={{ height: `${Math.min(100, Math.round(bands.treble * 100))}%` }}
@@ -168,8 +172,8 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
         </div>
 
         {/* Master Volume */}
-        <div className="flex items-center space-x-2">
-          <span className="text-[10px] text-zinc-500 font-bold">VOL</span>
+        <div className="flex items-center gap-2 bg-[#080b10] border border-[#1b2230] rounded px-3 py-1.5 shadow-inner">
+          <span className="text-[10px] text-zinc-400 font-bold tracking-wider">VOL</span>
           <input
             type="range"
             min={0}
@@ -183,6 +187,9 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
             }}
             className="w-16 h-1 bg-[#1c222c] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
           />
+          <span className="text-[10px] font-mono text-zinc-400 w-8 text-right">
+            {Math.round(volume * 100)}%
+          </span>
         </div>
       </div>
     </div>

@@ -66,31 +66,34 @@ export const WaveformPreview: React.FC<WaveformPreviewProps> = ({
     <div className="absolute inset-0 flex items-center pointer-events-none overflow-hidden rounded">
       <svg
         viewBox={`0 0 ${totalWidth} 100`}
-        className="w-full h-full opacity-40 hover:opacity-70 transition-opacity"
+        className="w-full h-full opacity-85 hover:opacity-100 transition-opacity"
         preserveAspectRatio="none"
       >
+        {/* Center Zero-Crossing Horizon Guide */}
+        <line x1="0" y1="50" x2={totalWidth} y2="50" stroke="#182333" strokeWidth="1" strokeDasharray="2, 2" />
+
         {/* Upper & Lower Base Unplayed Waveform */}
-        <path d={pathData} fill="none" stroke="#162231" strokeWidth="1.5" strokeLinecap="round" />
-        <path d={mirrorPathData} fill="none" stroke="#162231" strokeWidth="1.5" strokeLinecap="round" />
+        <path d={pathData} fill="none" stroke="#25354c" strokeWidth="1.8" strokeLinecap="round" />
+        <path d={mirrorPathData} fill="none" stroke="#25354c" strokeWidth="1.8" strokeLinecap="round" />
 
         {/* Played Upper & Lower Waveform Highlight */}
         <path
           d={pathData}
           fill="none"
           stroke="#00f0ff"
-          strokeWidth="2"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeDasharray={`${progress * totalWidth * 2}, ${totalWidth * 2}`}
-          style={{ filter: 'drop-shadow(0 0 4px #00f0ff)' }}
+          style={{ filter: 'drop-shadow(0 0 5px rgba(0,240,255,0.7))' }}
         />
         <path
           d={mirrorPathData}
           fill="none"
           stroke="#00f0ff"
-          strokeWidth="2"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeDasharray={`${progress * totalWidth * 2}, ${totalWidth * 2}`}
-          style={{ filter: 'drop-shadow(0 0 4px #00f0ff)' }}
+          style={{ filter: 'drop-shadow(0 0 5px rgba(0,240,255,0.7))' }}
         />
       </svg>
     </div>

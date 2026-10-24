@@ -4,16 +4,19 @@ import { useResonanceStore } from '../../../store/useResonanceStore.js';
 
 export interface HeaderBarProps {
   onScan?: () => void;
+  activeRibbonTab?: string;
+  onRibbonTabChange?: (tab: string) => void;
 }
 
-export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
+export const HeaderBar: React.FC<HeaderBarProps> = ({
+  onScan,
+  activeRibbonTab = 'media',
+  onRibbonTabChange,
+}) => {
   const isScanning = useResonanceStore((s) => s.scanStatus === 'loading');
   const setScanStatusStore = useResonanceStore((s) => s.setScanStatus);
   const setTracks = useResonanceStore((s) => s.setTracks);
   const setTrackCount = useResonanceStore((s) => s.setTrackCount);
-  const trackCount = useResonanceStore((s) => s.trackCount);
-  const searchQuery = useResonanceStore((s) => s.searchQuery);
-  const setSearchQuery = useResonanceStore((s) => s.setSearchQuery);
   const setExportModalOpen = useResonanceStore((s) => s.setExportModalOpen);
   const selectedTrack = useResonanceStore((s) => s.selectedTrack);
   const autoImmersiveEnabled = useResonanceStore((s) => s.autoImmersiveEnabled);
@@ -22,6 +25,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
 
   const [scanStatus, setScanStatus] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   React.useEffect(() => {
     window.resonance?.isWindowMaximized?.().then((max) => {
@@ -65,169 +69,193 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onScan }) => {
     }
   };
 
-  return (
-    <header
-      onDoubleClick={() => window.resonance?.maximizeWindow?.()}
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-      className="h-11 bg-[#080a0e] border-b border-[#1c222c] flex items-center justify-between pl-4 pr-0 font-mono select-none z-20"
-    >
-      {/* Brand & Telemetry Status (Draggable) */}
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff] animate-pulse" />
-          <span className="font-bold tracking-wider text-sm bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-            PROJECT RESONANCE
-          </span>
-        </div>
-        <span className="text-[10px] text-zinc-600">v0.1.0-RC</span>
-        <span className="text-zinc-700">|</span>
-        <span className="text-xs text-zinc-400">
-          VAULT: <strong className="text-[#00f0ff]">{trackCount}</strong> TRACKS
-        </span>
-      </div>
+  const ribbonTabs = [
+    { id: 'media', label: 'Media', icon: '📁' },
+    { id: 'audio', label: 'Audio', icon: '🎵' },
+    { id: 'titles', label: 'Titles', icon: '🔤' },
+    { id: 'transitions', label: 'Transitions', icon: '⧉' },
+    { id: 'effects', label: 'Effects', icon: '✨' },
+    { id: 'shaders', label: 'Shaders', icon: '🎨' },
+    { id: 'templates', label: 'Templates', icon: '📋' },
+  ];
 
-      {/* Quick FTS5 Search Input (No-Drag) */}
+  return (
+    <header className="flex flex-col bg-[#080a0e] border-b border-[#1c222c] font-mono select-none z-20 shrink-0">
+      {/* ─── Level 1: Application Menu Bar & Global Window Controls ─── */}
       <div
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        className="flex-1 max-w-xs xl:max-w-sm mx-3"
+        onDoubleClick={() => window.resonance?.maximizeWindow?.()}
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        className="h-9 border-b border-[#141b26] flex items-center justify-between pl-3 pr-0 overflow-hidden"
       >
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="FTS5 SEARCH: Title, Artist, Album, Genre..."
-            className="w-full bg-[#0f131a] border border-[#1e2533] focus:border-[#00f0ff] rounded px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none transition-colors"
-          />
-          {searchQuery && (
+        {/* Brand Logo & Menus */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff] animate-pulse" />
+            <span className="font-bold tracking-wider text-xs bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent whitespace-nowrap">
+              PROJECT RESONANCE
+            </span>
+          </div>
+
+          {/* Filmora-style Dropdown Menus (No-drag) */}
+          <div
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            className="flex items-center gap-0.5 text-[11px] text-zinc-400 ml-2"
+          >
+            {['File', 'Edit', 'Tools', 'View', 'Audio', 'Help'].map((item) => (
+              <button
+                key={item}
+                onClick={() => setActiveMenu(activeMenu === item ? null : item)}
+                className={`px-2 py-1 rounded hover:bg-[#161d2b] hover:text-white transition-colors cursor-pointer ${
+                  activeMenu === item ? 'bg-[#161d2b] text-white' : ''
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Center Project Title (Filmora style) */}
+        <div className="hidden lg:flex items-center gap-2 text-xs text-zinc-400 truncate max-w-sm">
+          <span className="text-zinc-600">Session:</span>
+          <span className="text-zinc-200 font-bold truncate">
+            {selectedTrack ? selectedTrack.title || selectedTrack.file_name : 'Untitled Audio Space'}
+          </span>
+          <span className="text-[10px] text-zinc-600">v0.1.0-RC</span>
+        </div>
+
+        {/* Right Action Utilities & Window Controls */}
+        <div className="flex items-center shrink-0">
+          <div
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            className="flex items-center gap-2 mr-3"
+          >
+            {/* Auto-Immersive Toggle */}
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-0 bottom-0 flex items-center px-1.5 text-xs text-zinc-500 hover:text-[#00f0ff] cursor-pointer transition-colors"
-              title="Clear search query"
+              onClick={() => setAutoImmersiveEnabled(!autoImmersiveEnabled)}
+              className={`h-6 px-2 rounded border text-[10px] tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                autoImmersiveEnabled
+                  ? 'bg-[#00f0ff]/10 border-[#00f0ff]/50 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.2)]'
+                  : 'bg-[#10131a] border-[#1f2736] text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Auto-enter Immersive Mode on idle playback (20s inactivity)"
             >
-              ✕
+              <span
+                className={`w-1 h-1 rounded-full ${
+                  autoImmersiveEnabled ? 'bg-[#00f0ff] animate-pulse' : 'bg-zinc-600'
+                }`}
+              />
+              <span>AUTO</span>
             </button>
-          )}
+
+            {/* Immersive Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsImmersive(true)}
+              className="h-6 px-2 bg-[#10131a] hover:bg-[#161d2b] border border-[#1f2736] hover:border-[#00f0ff]/60 text-[10px] text-zinc-300 hover:text-white rounded transition-all flex items-center gap-1 cursor-pointer"
+              title="Enter Fullscreen 3D Visualizer (Hotkey: F)"
+            >
+              <span className="text-[#00f0ff] text-xs">⛶</span>
+              <span>IMMERSIVE</span>
+            </button>
+
+            {/* Filmora Prominent Export Button */}
+            <button
+              type="button"
+              onClick={() => setExportModalOpen(true)}
+              disabled={!selectedTrack}
+              className="h-7 px-3 bg-[#00f0ff] hover:bg-[#38bdf8] text-black font-bold text-xs rounded transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(0,240,255,0.35)] active:scale-95"
+              title="Render 4K / 60FPS Video Export"
+            >
+              <span>Export</span>
+              <span className="text-[10px]">⌵</span>
+            </button>
+          </div>
+
+          {/* Window Controls (Minimize, Maximize, Close) */}
+          <div
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            className="flex items-center h-9 border-l border-[#1c222c] shrink-0"
+          >
+            <button
+              type="button"
+              onClick={() => window.resonance?.minimizeWindow?.()}
+              className="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title="Minimize"
+            >
+              <svg width="10" height="1" viewBox="0 0 10 1" fill="none">
+                <rect width="10" height="1" fill="currentColor" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.resonance?.maximizeWindow?.()}
+              className="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title={isMaximized ? 'Restore Down' : 'Maximize'}
+            >
+              {isMaximized ? (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 0v2H0v8h8V8h2V0H2zm6 8H1V3h7v5zm1-2V1H3v1h5v4h1z" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M0 0v10h10V0H0zm9 9H1V1h8v8z" fill="currentColor" />
+                </svg>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.resonance?.closeWindow?.()}
+              className="w-10 h-9 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
+              title="Close (Alt+F4)"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M0.7 0L5 4.3 9.3 0 10 0.7 5.7 5 10 9.3 9.3 10 5 5.7 0.7 10 0 9.3 4.3 5 0 0.7z" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Action Buttons & Window Controls */}
-      <div className="flex items-center space-x-3">
-        {scanStatus && (
-          <span className="text-[11px] text-[#00f0ff] animate-pulse">
-            {scanStatus}
-          </span>
-        )}
+      {/* ─── Level 2: Filmora-Style Module Ribbon Tabs ─── */}
+      <div className="h-10 bg-[#07090d] px-3 flex items-center justify-between border-b border-[#141b26] overflow-x-auto">
+        <div className="flex items-center gap-1">
+          {ribbonTabs.map((tab) => {
+            const isActive = activeRibbonTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onRibbonTabChange?.(tab.id)}
+                className={`h-8 px-3 rounded flex items-center gap-1.5 text-xs font-medium transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff] font-bold shadow-xs'
+                    : 'text-zinc-400 hover:text-white hover:bg-[#0f141f]'
+                }`}
+              >
+                <span className="text-xs">{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-        <div
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          className="flex items-center space-x-3"
-        >
-          {/* Auto-Immersive Inactivity Toggle */}
-          <button
-            onClick={() => setAutoImmersiveEnabled(!autoImmersiveEnabled)}
-            className={`px-2.5 py-1.5 border rounded text-xs transition-all flex items-center space-x-1.5 cursor-pointer ${
-              autoImmersiveEnabled
-                ? 'bg-[#00f0ff]/10 border-[#00f0ff]/40 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.15)]'
-                : 'bg-[#121620] border-[#232b3b] text-zinc-400 hover:text-zinc-200'
-            }`}
-            title="Toggle Auto-Immersive Mode on idle playback (20s inactivity timeout)"
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                autoImmersiveEnabled ? 'bg-[#00f0ff] animate-pulse shadow-[0_0_6px_#00f0ff]' : 'bg-zinc-600'
-              }`}
-            />
-            <span className="text-[10px] tracking-wider font-mono">
-              {autoImmersiveEnabled ? 'AUTO: ON' : 'AUTO: OFF'}
+        {/* Scan Folder Action Button in Ribbon */}
+        <div className="flex items-center gap-2">
+          {scanStatus && (
+            <span className="text-[10px] text-[#00f0ff] animate-pulse mr-2 hidden md:inline">
+              {scanStatus}
             </span>
-          </button>
-
-          {/* Immersive Mode Trigger */}
-          <button
-            onClick={() => setIsImmersive(true)}
-            className="px-2.5 py-1.5 bg-[#121620] hover:bg-[#1a2130] border border-[#232b3b] hover:border-[#00f0ff]/60 text-xs text-zinc-200 hover:text-white rounded transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm group"
-            title="Enter Immersive Mode (Hotkey: F or double-click visualizer)"
-          >
-            <span className="text-[#00f0ff] group-hover:scale-110 transition-transform">⛶</span>
-            <span className="text-[10px] tracking-wider font-mono">IMMERSIVE</span>
-            <kbd className="px-1 py-0.2 text-[8px] bg-black/40 border border-zinc-700/80 rounded text-zinc-400">
-              F
-            </kbd>
-          </button>
-
+          )}
           <button
             onClick={handleScanFolder}
             disabled={isScanning}
-            className="px-3 py-1.5 bg-[#121620] hover:bg-[#1a2130] border border-[#232b3b] hover:border-[#00f0ff]/50 text-xs text-zinc-200 rounded transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+            className="px-2.5 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-[#00f0ff]/50 rounded text-[11px] text-zinc-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
           >
-            <span>{isScanning ? 'SCANNING...' : 'SCAN MUSIC FOLDER'}</span>
-          </button>
-
-          <button
-            onClick={() => setExportModalOpen(true)}
-            disabled={!selectedTrack}
-            className="px-3 py-1.5 bg-[#14233a] hover:bg-[#1b3152] border border-[#00f0ff]/40 hover:border-[#00f0ff] text-xs text-[#00f0ff] font-bold rounded transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(0,240,255,0.15)]"
-          >
-            <span>EXPORT 4K / 60FPS</span>
-          </button>
-        </div>
-
-        {/* ─── Cybernetic Window Controls (Minimize, Maximize / Restore, Close) ─── */}
-        <div
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          className="flex items-center h-11 ml-2 border-l border-[#1c222c]"
-        >
-          {/* Minimize */}
-          <button
-            type="button"
-            onClick={() => window.resonance?.minimizeWindow?.()}
-            className="w-11 h-11 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
-            title="Minimize"
-          >
-            <svg width="10" height="1" viewBox="0 0 10 1" fill="none">
-              <rect width="10" height="1" fill="currentColor" />
-            </svg>
-          </button>
-
-          {/* Maximize / Restore */}
-          <button
-            type="button"
-            onClick={() => window.resonance?.maximizeWindow?.()}
-            className="w-11 h-11 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
-            title={isMaximized ? 'Restore Down' : 'Maximize'}
-          >
-            {isMaximized ? (
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path
-                  d="M2 0v2H0v8h8V8h2V0H2zm6 8H1V3h7v5zm1-2V1H3v1h5v4h1z"
-                  fill="currentColor"
-                />
-              </svg>
-            ) : (
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path
-                  d="M0 0v10h10V0H0zm9 9H1V1h8v8z"
-                  fill="currentColor"
-                />
-              </svg>
-            )}
-          </button>
-
-          {/* Close */}
-          <button
-            type="button"
-            onClick={() => window.resonance?.closeWindow?.()}
-            className="w-12 h-11 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#e81123] active:bg-[#f1707a] transition-colors cursor-pointer group"
-            title="Close (Alt+F4)"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path
-                d="M0.7 0L5 4.3 9.3 0 10 0.7 5.7 5 10 9.3 9.3 10 5 5.7 0.7 10 0 9.3 4.3 5 0 0.7z"
-                fill="currentColor"
-              />
-            </svg>
+            <span>📂</span>
+            <span>{isScanning ? 'Scanning...' : 'Scan Folder'}</span>
           </button>
         </div>
       </div>

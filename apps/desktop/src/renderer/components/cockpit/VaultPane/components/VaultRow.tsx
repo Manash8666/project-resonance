@@ -53,10 +53,10 @@ export const VaultRow: React.FC<VaultRowProps> = ({
       }`}
     >
       {/* Track Number & Vocal Badge */}
-      <div className="w-12 text-zinc-500 font-mono text-[11px] flex items-center space-x-1 shrink-0">
+      <div className="w-10 text-zinc-500 font-mono text-[10px] flex items-center space-x-1 shrink-0">
         <span>{track.track_number ?? '-'}</span>
         {track.has_lyrics === 1 && (
-          <span className="text-[9px] text-[#00f0ff] bg-[#00f0ff]/10 px-1 rounded border border-[#00f0ff]/30">
+          <span className="text-[8px] text-[#00f0ff] bg-[#00f0ff]/10 px-0.5 rounded border border-[#00f0ff]/30 font-bold">
             VOC
           </span>
         )}
@@ -84,7 +84,7 @@ export const VaultRow: React.FC<VaultRowProps> = ({
             className="w-full bg-[#121620] border border-[#00f0ff] rounded px-1.5 py-0.5 text-xs text-white focus:outline-none"
           />
         ) : (
-          <span className={isSelected ? 'text-[#00f0ff]' : 'text-zinc-200'}>
+          <span className={isSelected ? 'text-[#00f0ff] font-bold' : 'text-zinc-200'}>
             {track.title || track.file_name}
           </span>
         )}
@@ -92,7 +92,7 @@ export const VaultRow: React.FC<VaultRowProps> = ({
 
       {/* Artist Field */}
       <div
-        className="w-28 text-zinc-400 truncate pr-2"
+        className="w-24 text-zinc-400 truncate pr-2 text-[11px]"
         onDoubleClick={(e) => {
           e.stopPropagation();
           onStartEdit('artist_name', track.artist_name || '');
@@ -117,7 +117,7 @@ export const VaultRow: React.FC<VaultRowProps> = ({
       </div>
 
       {/* Duration */}
-      <div className="w-16 text-right font-mono text-[11px] text-zinc-500">
+      <div className="w-14 text-right font-mono text-[10px] text-zinc-500">
         {formatDuration(track.duration_ms)}
       </div>
     </div>

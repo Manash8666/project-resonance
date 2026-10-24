@@ -27,10 +27,20 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
     return () => setMounted(false);
   }, []);
 
+  // Monitor Display Settings (Filmora style)
+  const [aspectMode, setAspectMode] = useState<'fill' | '9:16' | '16:9'>('fill');
+  const [renderQuality, setRenderQuality] = useState<'Full' | '1/2' | '1/4'>('Full');
+
   // Immersive Mode State
   const isImmersive = useResonanceStore((s) => s.isImmersive);
   const setIsImmersive = useResonanceStore((s) => s.setIsImmersive);
   const toggleImmersive = useResonanceStore((s) => s.toggleImmersive);
+  const isPlaying = useResonanceStore((s) => s.isPlaying);
+  const currentTime = useResonanceStore((s) => s.currentTime);
+  const duration = useResonanceStore((s) => s.duration);
+  const volume = useResonanceStore((s) => s.volume);
+  const setVolume = useResonanceStore((s) => s.setVolume);
+  const seekTo = useResonanceStore((s) => s.seekTo);
 
   // Inactivity & Cursor Hiding in Immersive Mode
   const [isHudVisible, setIsHudVisible] = useState(true);
@@ -67,10 +77,9 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
       timer = setTimeout(() => {
         setIsHudVisible(false);
         setIsCursorHidden(true);
-      }, 3500); // 3.5 seconds of inactivity hides HUD and cursor
+      }, 3500);
     };
 
-    // Initial wake on entering immersive mode
     handleActivity();
 
     window.addEventListener('mousemove', handleActivity, { passive: true });
@@ -85,7 +94,7 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
     };
   }, [isImmersive]);
 
-  // Global Keyboard Shortcuts (Escape to exit, F to toggle)
+  // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -99,6 +108,9 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
       } else if (e.code === 'KeyF') {
         e.preventDefault();
         toggleImmersive();
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        handleTogglePlay();
       }
     };
 
@@ -111,14 +123,29 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
   const bandsRef = React.useRef(bands);
   bandsRef.current = bands;
 
-  const currentTime = useResonanceStore((s) => s.currentTime);
   const activeLyrics = useResonanceStore((s) => s.activeLyrics);
 
-  // Active word calculation for real-time kinetic overlay
   const activeWord = useMemo(() => {
     if (!activeLyrics || activeLyrics.length === 0) return null;
     return activeLyrics.find((w) => currentTime >= w.start && currentTime <= w.end) || null;
   }, [activeLyrics, currentTime]);
+
+  const handleTogglePlay = async () => {
+    const el = audioEngine.getAudioElement();
+    if ((!el.src || el.src === window.location.href) && selectedTrack) {
+      await audioEngine.loadTrack(selectedTrack.file_path);
+    }
+    await audioEngine.toggle();
+  };
+
+  const formatSMPTE = (seconds: number): string => {
+    if (isNaN(seconds) || seconds < 0) return '00:00:00:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const frames = Math.floor((seconds % 1) * 30);
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
+  };
 
   if (!mounted) {
     return <div className="w-full h-full bg-[#05070a] flex items-center justify-center" />;
@@ -126,64 +153,242 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
 
   return (
     <div
-      onDoubleClick={toggleImmersive}
-      className={`w-full h-full bg-[#05070a] flex items-center justify-center select-none ${
-        isImmersive
-          ? 'fixed inset-0 z-40'
-          : 'relative overflow-hidden'
+      className={`w-full h-full bg-[#05070a] flex flex-col select-none ${
+        isImmersive ? 'fixed inset-0 z-40' : 'relative overflow-hidden'
       } ${isImmersive && isCursorHidden ? 'cursor-none' : 'cursor-default'}`}
     >
-      {/* 3D WebGL Canvas Scene (Persistent Canvas: Zero Remounts) */}
-      <div className="absolute inset-0">
-        <VisualizerScene
-          audioElement={effectiveAudioElement}
-          dataTexture={audioEngine.getDataTexture() as any}
-          bandsRef={bandsRef}
-          albumArtUrl={internalCoverArt}
-        />
+      {/* ─── 1. Filmora-Style Monitor Header (Player title, Quality, Aspect Ratio) ─── */}
+      {!isImmersive && (
+        <div className="h-8 bg-[#090c12] border-b border-[#1a2230] px-3 flex items-center justify-between shrink-0 text-zinc-400 font-mono text-xs">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-white text-[11px] tracking-wider flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#00f0ff] shadow-[0_0_6px_#00f0ff]" />
+              <span>Player</span>
+            </span>
+
+            {/* Quality Dropdown */}
+            <div className="flex items-center gap-1 text-[10px] bg-[#0e131b] border border-[#1e2736] rounded px-1.5 py-0.5">
+              <span className="text-zinc-500">Quality:</span>
+              <button
+                onClick={() =>
+                  setRenderQuality(renderQuality === 'Full' ? '1/2' : renderQuality === '1/2' ? '1/4' : 'Full')
+                }
+                className="text-[#00f0ff] font-bold cursor-pointer"
+              >
+                {renderQuality} ⌵
+              </button>
+            </div>
+
+            {/* Aspect Ratio Switcher (Filmora vertical vs landscape) */}
+            <div className="flex items-center gap-1 bg-[#0e131b] border border-[#1e2736] rounded px-1 py-0.5 text-[10px]">
+              {(['fill', '16:9', '9:16'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setAspectMode(mode)}
+                  className={`px-1.5 py-0.2 rounded uppercase transition-colors cursor-pointer ${
+                    aspectMode === mode
+                      ? 'bg-[#182638] text-[#00f0ff] font-bold border border-[#00f0ff]/40'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {mode === '9:16' ? 'Vertical 9:16' : mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fullscreen Button */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsImmersive(true)}
+              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer"
+              title="Fullscreen Visualizer (F)"
+            >
+              ⛶
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 2. Center 3D WebGL Canvas Scene (Persistent Canvas: Zero Remounts) ─── */}
+      <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden bg-[#05070a]">
+        {/* Background Ambient Reflection in Vertical 9:16 Mode */}
+        {aspectMode === '9:16' && !isImmersive && (
+          <div className="absolute inset-0 opacity-20 filter blur-xl pointer-events-none scale-125">
+            <div className="w-full h-full bg-gradient-to-t from-[#00f0ff]/30 via-fuchsia-900/20 to-black" />
+          </div>
+        )}
+
+        {/* Viewport Frame Container */}
+        <div
+          className={`relative transition-all duration-300 flex items-center justify-center ${
+            isImmersive
+              ? 'w-full h-full'
+              : aspectMode === '9:16'
+              ? 'aspect-[9/16] h-[95%] max-w-sm rounded-lg border border-[#1e2736] shadow-[0_0_40px_rgba(0,0,0,0.8)] overflow-hidden'
+              : aspectMode === '16:9'
+              ? 'aspect-video w-[95%] max-h-full rounded-lg border border-[#1e2736] shadow-2xl overflow-hidden'
+              : 'w-full h-full'
+          }`}
+        >
+          {/* WebGL Scene */}
+          <div className="absolute inset-0">
+            <VisualizerScene
+              audioElement={effectiveAudioElement}
+              dataTexture={audioEngine.getDataTexture() as any}
+              bandsRef={bandsRef}
+              albumArtUrl={internalCoverArt}
+            />
+          </div>
+
+          {/* Kinetic Typography Overlay (Always in sync) */}
+          <KineticOverlay activeWord={activeWord} />
+        </div>
+
+        {/* Cybernetic Telemetry HUD Overlay (Top-Left) */}
+        {!isImmersive && (
+          <TelemetryHUD bass={bands.bass} mid={bands.mid} treble={bands.treble} />
+        )}
+
+        {/* Return to DAW Button (Visible only in Immersive Mode) */}
+        {isImmersive && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsImmersive(false);
+            }}
+            className={`absolute top-4 right-4 z-50 px-3 py-1.5 bg-[#080c14]/90 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/40 hover:border-[#00f0ff] rounded-md text-[11px] font-mono text-zinc-200 hover:text-[#00f0ff] transition-all duration-300 cursor-pointer backdrop-blur-md shadow-[0_0_15px_rgba(0,240,255,0.2)] flex items-center space-x-2 ${
+              isHudVisible ? 'opacity-90' : 'opacity-35 hover:opacity-100'
+            }`}
+            title="Return to DAW Cockpit (Press 'ESC' or 'F')"
+          >
+            <span className="text-xs">⎋</span>
+            <span className="text-[10px] tracking-wider font-semibold">RETURN TO DAW</span>
+            <kbd className="px-1.5 py-0.5 text-[9px] bg-black/60 border border-zinc-700 rounded text-[#00f0ff]">
+              ESC
+            </kbd>
+          </button>
+        )}
       </div>
 
-      {/* Cybernetic Telemetry HUD Overlay (Top-Left, Hidden in Immersive Mode) */}
+      {/* ─── 3. Filmora-Style Monitor Transport Bar (Below Player Canvas) ─── */}
       {!isImmersive && (
-        <TelemetryHUD bass={bands.bass} mid={bands.mid} treble={bands.treble} />
+        <div className="h-10 bg-[#080b10] border-t border-[#1a2230] px-4 flex items-center justify-between shrink-0 text-zinc-300 font-mono text-xs">
+          {/* Timecode Readout */}
+          <div className="flex items-center gap-1.5 text-[11px] font-bold">
+            <span className="text-[#00f0ff]">{formatSMPTE(currentTime)}</span>
+            <span className="text-zinc-600">/</span>
+            <span className="text-zinc-500">{formatSMPTE(duration)}</span>
+          </div>
+
+          {/* Transport Controls (Step Back, Prev, Play/Pause, Next, Step Forward) */}
+          <div className="flex items-center gap-2">
+            {/* Step Frame Back */}
+            <button
+              onClick={() => audioEngine.seek(Math.max(0, currentTime - 1 / 30))}
+              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer text-zinc-400"
+              title="Step 1 Frame Back"
+            >
+              ◂|
+            </button>
+
+            {/* Skip 5s Back */}
+            <button
+              onClick={() => audioEngine.seek(Math.max(0, currentTime - 5))}
+              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer text-zinc-400"
+              title="Skip 5s Back (J)"
+            >
+              ◁
+            </button>
+
+            {/* Main Play/Pause Button */}
+            <button
+              onClick={handleTogglePlay}
+              className="w-7 h-7 rounded-full bg-[#121824] hover:bg-[#1a2335] border border-[#232f42] hover:border-[#00f0ff] flex items-center justify-center text-[#00f0ff] cursor-pointer transition-all shadow-md active:scale-95"
+              title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+            >
+              {isPlaying ? <span className="text-[10px]">❚❚</span> : <span className="text-[10px] pl-0.5">▶</span>}
+            </button>
+
+            {/* Skip 5s Forward */}
+            <button
+              onClick={() => audioEngine.seek(Math.min(duration, currentTime + 5))}
+              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer text-zinc-400"
+              title="Skip 5s Forward (L)"
+            >
+              ▷
+            </button>
+
+            {/* Step Frame Forward */}
+            <button
+              onClick={() => audioEngine.seek(Math.min(duration, currentTime + 1 / 30))}
+              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer text-zinc-400"
+              title="Step 1 Frame Forward"
+            >
+              |▸
+            </button>
+
+            {/* Region Loop Marker */}
+            <button
+              className="px-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer ml-1 text-xs"
+              title="Loop In/Out Region"
+            >
+              {`{ }`}
+            </button>
+          </div>
+
+          {/* Right Tools: Snapshot, Volume, Fullscreen */}
+          <div className="flex items-center gap-3">
+            {/* Snapshot Camera */}
+            <button
+              onClick={() => {
+                const canvas = document.querySelector('canvas');
+                if (canvas) {
+                  const url = canvas.toDataURL('image/png');
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `resonance_snapshot_${Date.now()}.png`;
+                  a.click();
+                }
+              }}
+              className="p-1 text-zinc-400 hover:text-[#00f0ff] transition-colors cursor-pointer text-xs"
+              title="Capture Viewport Snapshot"
+            >
+              📷
+            </button>
+
+            {/* Volume */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-zinc-500 text-xs">🔊</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={volume}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  setVolume(v);
+                  audioEngine.setVolume(v);
+                }}
+                className="w-14 h-1 bg-[#1e2738] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
+                title={`Volume: ${Math.round(volume * 100)}%`}
+              />
+            </div>
+
+            {/* Maximize to Immersive */}
+            <button
+              onClick={() => setIsImmersive(true)}
+              className="p-1 text-zinc-400 hover:text-[#00f0ff] transition-colors cursor-pointer text-xs"
+              title="Enter Immersive 3D Visualizer (F)"
+            >
+              ⛶
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* Quick Immersive Toggle Action (Top-Right) */}
-      {!isImmersive ? (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsImmersive(true);
-          }}
-          className="absolute top-4 right-4 z-20 px-2.5 py-1.5 bg-[#080c14]/75 hover:bg-[#00f0ff]/20 border border-[#1e2533] hover:border-[#00f0ff]/60 rounded-md text-[11px] font-mono text-zinc-400 hover:text-[#00f0ff] transition-all cursor-pointer backdrop-blur-sm shadow-md flex items-center space-x-1.5 group"
-          title="Enter Immersive Mode (Double-click or press 'F')"
-        >
-          <span className="text-xs group-hover:scale-110 transition-transform">⛶</span>
-          <span className="text-[10px] tracking-wider font-semibold">IMMERSIVE</span>
-        </button>
-      ) : (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsImmersive(false);
-          }}
-          className={`absolute top-4 right-4 z-50 px-3 py-1.5 bg-[#080c14]/90 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/40 hover:border-[#00f0ff] rounded-md text-[11px] font-mono text-zinc-200 hover:text-[#00f0ff] transition-all duration-300 cursor-pointer backdrop-blur-md shadow-[0_0_15px_rgba(0,240,255,0.2)] flex items-center space-x-2 ${
-            isHudVisible ? 'opacity-90' : 'opacity-35 hover:opacity-100'
-          }`}
-          title="Return to DAW Cockpit (Press 'ESC' or 'F')"
-        >
-          <span className="text-xs">⎋</span>
-          <span className="text-[10px] tracking-wider font-semibold">RETURN TO DAW</span>
-          <kbd className="px-1.5 py-0.5 text-[9px] bg-black/60 border border-zinc-700 rounded text-[#00f0ff]">
-            ESC
-          </kbd>
-        </button>
-      )}
-
-      {/* Kinetic Typography Manifestation (Center: Always Active in Sync) */}
-      <KineticOverlay activeWord={activeWord} />
-
-      {/* Minimal Floating Cybernetic HUD (Visible only in Immersive Mode during activity) */}
+      {/* Minimal Floating Cybernetic HUD in Immersive Mode */}
       <ImmersiveHUD
         isVisible={isImmersive && isHudVisible}
         onExit={() => setIsImmersive(false)}
@@ -191,4 +396,3 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
     </div>
   );
 };
-
