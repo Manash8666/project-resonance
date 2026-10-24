@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React from 'react';
+import { Play, Pause } from 'lucide-react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 import { audioEngine } from '../../../audio/AudioEngine.js';
 import { WaveformPreview } from './components/WaveformPreview.js';
@@ -94,9 +95,9 @@ export const TransportDeck: React.FC<TransportDeckProps> = ({
           className="w-10 h-10 rounded-full bg-[#121620] hover:bg-[#1c2333] border border-[#232b3b] hover:border-[#00f0ff] flex items-center justify-center text-[#00f0ff] cursor-pointer transition-all shadow-md active:scale-95 shrink-0"
         >
           {isPlaying ? (
-            <span className="text-xs font-bold">❚❚</span>
+            <Pause className="w-4 h-4 fill-current" />
           ) : (
-            <span className="text-xs font-bold pl-0.5">▶</span>
+            <Play className="w-4 h-4 fill-current ml-0.5" />
           )}
         </button>
 

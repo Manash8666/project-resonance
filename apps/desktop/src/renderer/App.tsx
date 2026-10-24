@@ -62,12 +62,20 @@ const App: React.FC = () => {
         }
         // Load initial tracks from the SQLite backend on startup
         const result = await window.resonance.getTracks(1000, 0);
+        let list: Track[] = [];
         if (Array.isArray(result)) {
-          setTracks(result);
-          setTrackCount(result.length);
+          list = result;
         } else if (result?.success && result.data) {
-          setTracks(result.data);
-          setTrackCount(result.data.length);
+          list = result.data;
+        }
+        setTracks(list);
+        setTrackCount(list.length);
+
+        if (list.length > 0) {
+          const firstTrack = list[0];
+          setSelectedTrackId(firstTrack.id);
+          setSelectedTrack(firstTrack);
+          void audioEngine.loadTrack(firstTrack.file_path);
         }
       } catch (error) {
         console.error('Failed to initialize library:', error);
@@ -83,7 +91,7 @@ const App: React.FC = () => {
     return () => {
       cleanupTeardown?.();
     };
-  }, [setTracks, setTrackCount]);
+  }, [setTracks, setTrackCount, setSelectedTrackId, setSelectedTrack]);
 
   const handleScanLibrary = async () => {
     setScanning(true);
@@ -93,12 +101,18 @@ const App: React.FC = () => {
         const result = await window.resonance.scanDirectory(folderPath);
         if (result?.success !== false) {
           const fresh = await window.resonance.getTracks(1000, 0);
+          let list: Track[] = [];
           if (Array.isArray(fresh)) {
-            setTracks(fresh);
-            setTrackCount(fresh.length);
+            list = fresh;
           } else if (fresh?.success && fresh.data) {
-            setTracks(fresh.data);
-            setTrackCount(fresh.data.length);
+            list = fresh.data;
+          }
+          setTracks(list);
+          setTrackCount(list.length);
+          if (list.length > 0 && !selectedTrack) {
+            setSelectedTrackId(list[0].id);
+            setSelectedTrack(list[0]);
+            void audioEngine.loadTrack(list[0].file_path);
           }
         }
       }
@@ -121,12 +135,23 @@ const App: React.FC = () => {
     }
   };
 
-  const handleTogglePlay = () => {
-    const el = audioEngine.getAudioElement();
-    if ((!el.src || el.src === window.location.href) && selectedTrack) {
-      audioEngine.loadTrack(selectedTrack.file_path);
+  const handleTogglePlay = async () => {
+    let track = selectedTrack;
+    if (!track) {
+      const currentTracks = useResonanceStore.getState().tracks;
+      if (currentTracks.length > 0) {
+        track = currentTracks[0];
+        setSelectedTrackId(track.id);
+        setSelectedTrack(track);
+      }
     }
-    void audioEngine.toggle();
+    if (track) {
+      const el = audioEngine.getAudioElement();
+      if (!el.src || el.src === window.location.href || !el.src.includes(track.file_path.substring(0, 20))) {
+        await audioEngine.loadTrack(track.file_path);
+      }
+    }
+    await audioEngine.toggle();
   };
 
   const handleSeek = (timeInSeconds: number) => {

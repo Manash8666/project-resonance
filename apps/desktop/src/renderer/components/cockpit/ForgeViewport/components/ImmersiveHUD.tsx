@@ -1,5 +1,6 @@
 // apps/desktop/src/renderer/components/cockpit/ForgeViewport/components/ImmersiveHUD.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { Play, Pause, Volume2 } from 'lucide-react';
 import { useResonanceStore } from '../../../../store/useResonanceStore.js';
 import { audioEngine } from '../../../../audio/AudioEngine.js';
 
@@ -77,7 +78,11 @@ export const ImmersiveHUD: React.FC<ImmersiveHUDProps> = ({ isVisible, onExit })
             className="w-8 h-8 rounded-full bg-[#00f0ff]/15 hover:bg-[#00f0ff]/30 border border-[#00f0ff]/60 flex items-center justify-center text-sm text-[#00f0ff] hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_12px_rgba(0,240,255,0.25)]"
             title={isPlaying ? 'Pause' : 'Play'}
           >
-            {isPlaying ? '❚❚' : '▶'}
+            {isPlaying ? (
+              <Pause className="w-3.5 h-3.5 fill-current" />
+            ) : (
+              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+            )}
           </button>
 
           <div className="text-[11px] font-mono text-zinc-300">
@@ -89,7 +94,7 @@ export const ImmersiveHUD: React.FC<ImmersiveHUDProps> = ({ isVisible, onExit })
 
         {/* Volume Control */}
         <div className="flex items-center space-x-2">
-          <span className="text-xs text-zinc-400">🔊</span>
+          <Volume2 className="w-3.5 h-3.5 text-zinc-400" />
           <input
             type="range"
             min="0"

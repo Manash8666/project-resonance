@@ -130,16 +130,22 @@ export class AudioEngine {
   }
 
   /**
-   * Loads a track by file path using media:// in Electron or file:/// with CORS.
+   * Loads a track by file path using media:// in Electron, data:, or file:/// with CORS.
    */
   public async loadTrack(filePath: string): Promise<void> {
     let fileUrl: string;
-    if (filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('data:') || filePath.startsWith('blob:') || filePath.startsWith('media:')) {
+    if (
+      filePath.startsWith('http://') ||
+      filePath.startsWith('https://') ||
+      filePath.startsWith('data:') ||
+      filePath.startsWith('blob:') ||
+      filePath.startsWith('media:')
+    ) {
       fileUrl = filePath;
     } else {
       // 1. Convert Windows backslashes to forward slashes
       const formattedPath = filePath.replace(/\\/g, '/');
-      
+
       // If running inside Electron, use privileged CORS media:// protocol
       if (window.resonance) {
         fileUrl = `media:///${formattedPath.replace(/^\/+/, '')}`;
@@ -151,18 +157,44 @@ export class AudioEngine {
       }
     }
 
-    console.log('[Resonance AudioEngine] Loading Audio Source:', fileUrl);
-    
-    this.audioElement.src = fileUrl;
-    this.audioElement.load();
-    
-    // Wait for metadata to ensure the file is actually readable
-    await new Promise<void>((resolve, reject) => {
-      this.audioElement.addEventListener('loadedmetadata', () => resolve(), { once: true });
-      this.audioElement.addEventListener('error', (e) => {
-        console.error("Audio element error on URL:", fileUrl, e);
-        reject(new Error("Media element error"));
-      }, { once: true });
+    // If already loaded and ready, return immediately
+    if (this.audioElement.src === fileUrl && this.audioElement.readyState >= 1) {
+      return;
+    }
+
+    console.log('[Resonance AudioEngine] Loading Audio Source:', fileUrl.substring(0, 60));
+
+    // Ensure AudioContext is initialized
+    await this.ensureAudioContext();
+
+    await new Promise<void>((resolve) => {
+      let isResolved = false;
+      const done = () => {
+        if (!isResolved) {
+          isResolved = true;
+          cleanup();
+          resolve();
+        }
+      };
+      const cleanup = () => {
+        this.audioElement.removeEventListener('loadedmetadata', done);
+        this.audioElement.removeEventListener('canplay', done);
+        this.audioElement.removeEventListener('error', onError);
+      };
+      const onError = (e: unknown) => {
+        console.warn('[Resonance AudioEngine] Audio element load warning:', e);
+        done();
+      };
+
+      this.audioElement.addEventListener('loadedmetadata', done, { once: true });
+      this.audioElement.addEventListener('canplay', done, { once: true });
+      this.audioElement.addEventListener('error', onError, { once: true });
+
+      this.audioElement.src = fileUrl;
+      this.audioElement.load();
+
+      // 1.2s timeout safety net so it never hangs
+      setTimeout(done, 1200);
     });
   }
 
@@ -171,6 +203,13 @@ export class AudioEngine {
    */
   public async play(): Promise<void> {
     await this.ensureAudioContext();
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      try {
+        await this.audioContext.resume();
+      } catch (err) {
+        console.warn('AudioContext resume warning:', err);
+      }
+    }
     try {
       await this.audioElement.play();
       useResonanceStore.getState().setIsPlaying(true);

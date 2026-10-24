@@ -1,5 +1,18 @@
 // apps/desktop/src/renderer/components/cockpit/InspectorRack/index.tsx
 import React, { useState } from 'react';
+import {
+  RotateCcw,
+  Link2,
+  Unlink,
+  FlipHorizontal,
+  FlipVertical,
+  Type,
+  Video,
+  Volume2,
+  Sparkles,
+  Sliders,
+  Check,
+} from 'lucide-react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 import { ShaderTuning } from './components/ShaderTuning.js';
 
@@ -99,19 +112,41 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
     <div className="flex flex-col h-full bg-[#080a0e] border-l border-[#1a2230] font-mono select-none overflow-hidden text-xs">
       {/* ─── 1. Main Navigation Ribbon Tabs (Text, Video, Audio) ─── */}
       <div className="h-8 bg-[#0b0e14] border-b border-[#1a2230] flex items-center px-2 gap-1 shrink-0 text-[11px]">
-        {(['text', 'video', 'audio'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setMainTab(tab)}
-            className={`px-3 py-1 rounded-t-sm uppercase font-bold transition-all cursor-pointer ${
-              mainTab === tab
-                ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff]'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            {tab === 'text' ? 'Text' : tab === 'video' ? 'Video' : 'Audio'}
-          </button>
-        ))}
+        <button
+          onClick={() => setMainTab('video')}
+          className={`px-3 py-1 rounded-t-sm uppercase font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            mainTab === 'video'
+              ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff]'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <Video className="w-3 h-3" />
+          <span>Video</span>
+        </button>
+
+        <button
+          onClick={() => setMainTab('text')}
+          className={`px-3 py-1 rounded-t-sm uppercase font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            mainTab === 'text'
+              ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff]'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <Type className="w-3 h-3" />
+          <span>Text</span>
+        </button>
+
+        <button
+          onClick={() => setMainTab('audio')}
+          className={`px-3 py-1 rounded-t-sm uppercase font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            mainTab === 'audio'
+              ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff]'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <Volume2 className="w-3 h-3" />
+          <span>Audio</span>
+        </button>
       </div>
 
       {/* ─── 2. Sub-Category Tabs (Basic, Mask / Shader, AI Tools) ─── */}
@@ -134,11 +169,12 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
         </button>
         <button
           onClick={() => setSubTab('ai')}
-          className={`px-2 py-0.5 rounded cursor-pointer ${
+          className={`px-2 py-0.5 rounded cursor-pointer flex items-center gap-1 ${
             subTab === 'ai' ? 'bg-[#182638] text-[#00f0ff] font-bold' : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
-          AI Tools ❯
+          <span>AI Tools</span>
+          <span className="text-[9px] text-[#00f0ff]">›</span>
         </button>
       </div>
 
@@ -151,7 +187,7 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
             <div className="bg-[#0b0e14] border border-[#1a2230] rounded-md p-3 space-y-3">
               <div className="flex items-center justify-between border-b border-[#161c28] pb-1.5">
                 <div className="flex items-center gap-2">
-                  {/* Green/Cyan Active Toggle Switch (matches Filmora reference) */}
+                  {/* Green/Cyan Active Toggle Switch */}
                   <button
                     onClick={() => setTransformEnabled(!transformEnabled)}
                     className={`w-7 h-3.5 rounded-full transition-colors relative cursor-pointer ${
@@ -168,10 +204,11 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
                 </div>
                 <button
                   onClick={handleResetTransform}
-                  className="text-[9px] text-zinc-500 hover:text-[#00f0ff] cursor-pointer"
+                  className="flex items-center gap-1 text-[9px] text-zinc-500 hover:text-[#00f0ff] cursor-pointer transition-colors"
                   title="Reset Transform Values"
                 >
-                  ↺ Reset
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  <span>Reset</span>
                 </button>
               </div>
 
@@ -183,10 +220,22 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
                       <span>Scale</span>
                       <button
                         onClick={() => setIsScaleLinked(!isScaleLinked)}
-                        className={`text-[9px] cursor-pointer ${isScaleLinked ? 'text-[#00f0ff]' : 'text-zinc-600'}`}
+                        className={`flex items-center gap-1 text-[9px] cursor-pointer transition-colors ${
+                          isScaleLinked ? 'text-[#00f0ff]' : 'text-zinc-600'
+                        }`}
                         title={isScaleLinked ? 'Proportions Linked' : 'Proportions Free'}
                       >
-                        {isScaleLinked ? '🔒 Linked' : '🔓 Unlinked'}
+                        {isScaleLinked ? (
+                          <>
+                            <Link2 className="w-2.5 h-2.5" />
+                            <span>Linked</span>
+                          </>
+                        ) : (
+                          <>
+                            <Unlink className="w-2.5 h-2.5" />
+                            <span>Unlinked</span>
+                          </>
+                        )}
                       </button>
                     </div>
 
@@ -270,17 +319,17 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        className="px-2 py-1 bg-[#0e131b] hover:bg-[#161e2b] border border-[#1e2736] rounded text-zinc-300 hover:text-white cursor-pointer"
+                        className="p-1.5 bg-[#0e131b] hover:bg-[#161e2b] border border-[#1e2736] rounded text-zinc-300 hover:text-white cursor-pointer transition-colors"
                         title="Flip Horizontal"
                       >
-                        ◨
+                        <FlipHorizontal className="w-3 h-3" />
                       </button>
                       <button
                         type="button"
-                        className="px-2 py-1 bg-[#0e131b] hover:bg-[#161e2b] border border-[#1e2736] rounded text-zinc-300 hover:text-white cursor-pointer"
+                        className="p-1.5 bg-[#0e131b] hover:bg-[#161e2b] border border-[#1e2736] rounded text-zinc-300 hover:text-white cursor-pointer transition-colors"
                         title="Flip Vertical"
                       >
-                        ⬍
+                        <FlipVertical className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
@@ -366,12 +415,17 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
                     : 'bg-[#181326] hover:bg-[#251d3b] border-fuchsia-500/50 text-fuchsia-400 hover:text-white'
                 }`}
               >
+                {selectedTrack?.has_lyrics ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
                 <span>
                   {isTranscribing
-                    ? '⚡ TRANSCRIBING VOCALS (WHISPER)...'
+                    ? 'TRANSCRIBING VOCALS (WHISPER)...'
                     : selectedTrack?.has_lyrics
-                    ? '✓ VOCALS TRANSCRIBED (RE-RUN)'
-                    : '⚡ AUTO-TRANSCRIBE VOCALS'}
+                    ? 'VOCALS TRANSCRIBED (RE-RUN)'
+                    : 'AUTO-TRANSCRIBE VOCALS'}
                 </span>
               </button>
 
@@ -448,15 +502,17 @@ export const InspectorRack: React.FC<InspectorRackProps> = ({
       <div className="h-10 bg-[#090c12] border-t border-[#1a2230] px-3 flex items-center justify-between shrink-0">
         <button
           onClick={handleResetTransform}
-          className="px-3 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-zinc-500 rounded text-[10px] text-zinc-300 hover:text-white transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-zinc-500 rounded text-[10px] text-zinc-300 hover:text-white transition-all cursor-pointer"
         >
-          Reset
+          <RotateCcw className="w-2.5 h-2.5" />
+          <span>Reset</span>
         </button>
 
         <button
-          className="px-3 py-1 bg-[#14233a] hover:bg-[#1c3252] border border-[#00f0ff]/40 hover:border-[#00f0ff] rounded text-[10px] text-[#00f0ff] font-bold transition-all shadow-xs cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1 bg-[#14233a] hover:bg-[#1c3252] border border-[#00f0ff]/40 hover:border-[#00f0ff] rounded text-[10px] text-[#00f0ff] font-bold transition-all shadow-xs cursor-pointer"
         >
-          Keyframe Panel
+          <Sliders className="w-2.5 h-2.5" />
+          <span>Keyframe Panel</span>
         </button>
       </div>
     </div>

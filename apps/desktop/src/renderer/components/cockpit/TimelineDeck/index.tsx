@@ -1,5 +1,26 @@
 // apps/desktop/src/renderer/components/cockpit/TimelineDeck/index.tsx
 import React, { useState, useRef, useMemo } from 'react';
+import {
+  MousePointer,
+  Scissors,
+  Trash2,
+  Type,
+  Sparkles,
+  Flag,
+  Magnet,
+  ZoomIn,
+  ZoomOut,
+  Video,
+  Eye,
+  EyeOff,
+  Lock,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Grid,
+  Music,
+} from 'lucide-react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 import { audioEngine } from '../../../audio/AudioEngine.js';
 import type { Track } from '../../../types/track.js';
@@ -16,9 +37,8 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
   const duration = useResonanceStore((s) => s.duration);
   const activeLyrics = useResonanceStore((s) => s.activeLyrics);
   const seekTo = useResonanceStore((s) => s.seekTo);
-  const setScrubbing = useResonanceStore((s) => s.setScrubbing);
 
-  const [zoomLevel, setZoomLevel] = useState<number>(1); // 1x to 4x zoom
+  const [zoomLevel, setZoomLevel] = useState<number>(1); // 1x to 3x zoom
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isLyricsMuted, setIsLyricsMuted] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -38,7 +58,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
   };
 
-  // Generate ruler tick marks (every 5s or 10s depending on duration and zoom)
+  // Generate ruler tick marks (every 5s or 15s depending on duration and zoom)
   const rulerTicks = useMemo(() => {
     const ticks: { time: number; label: string; percent: number }[] = [];
     const step = effectiveDuration <= 60 ? 5 : effectiveDuration <= 180 ? 15 : 30;
@@ -102,7 +122,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             className="p-1.5 rounded hover:bg-[#161d2b] hover:text-[#00f0ff] transition-colors cursor-pointer"
             title="Grid Modes"
           >
-            <span className="text-xs">⊞</span>
+            <Grid className="w-3.5 h-3.5" />
           </button>
 
           <button
@@ -115,9 +135,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             }`}
             title="Selection Tool (V)"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 3l7 18 3-7 7-3L3 3z" />
-            </svg>
+            <MousePointer className="w-3.5 h-3.5" />
           </button>
 
           <button
@@ -130,7 +148,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             }`}
             title="Split Razor (C)"
           >
-            <span className="text-xs">✂</span>
+            <Scissors className="w-3.5 h-3.5" />
           </button>
 
           <button
@@ -138,7 +156,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             className="p-1.5 rounded hover:bg-[#161d2b] hover:text-red-400 transition-colors cursor-pointer"
             title="Delete Selected Clip (Del)"
           >
-            <span className="text-xs">🗑</span>
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
 
           <div className="h-4 w-px bg-[#1e2736] mx-1" />
@@ -150,17 +168,17 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             className="px-2 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-[#00f0ff]/50 rounded text-[10px] text-zinc-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
             title="Add Kinetic Typography Layer"
           >
-            <span className="font-bold text-[#00f0ff]">T</span>
+            <Type className="w-3 h-3 text-[#00f0ff]" />
             <span>Title</span>
           </button>
 
           {/* AI Transcribe Trigger */}
           <button
             type="button"
-            className="px-2 py-1 bg-[#121f18] hover:bg-[#182d22] border border-emerald-500/40 rounded text-[10px] text-emerald-400 transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2 py-1 bg-[#121f18] hover:bg-[#182d22] border border-emerald-500/40 rounded text-[10px] text-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer"
             title="AI Whisper Speech-To-Text Sync"
           >
-            <span className="text-[10px] font-bold">AI</span>
+            <Sparkles className="w-3 h-3" />
             <span>Whisper</span>
           </button>
 
@@ -169,19 +187,36 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             className="p-1.5 rounded hover:bg-[#161d2b] hover:text-[#00f0ff] transition-colors cursor-pointer"
             title="Add Marker (M)"
           >
-            <span className="text-xs">⛳</span>
+            <Flag className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Center Current Timecode Display */}
-        <div className="flex items-center gap-2 bg-[#06080c] px-3 py-1 rounded border border-[#1a2230]">
-          <span className="text-[#00f0ff] font-bold tracking-wider text-xs">
-            {formatTimecode(currentTime)}
-          </span>
-          <span className="text-zinc-600">/</span>
-          <span className="text-zinc-500 text-xs">
-            {formatTimecode(effectiveDuration)}
-          </span>
+        {/* Center Current Timecode Display with Quick Play/Pause Button */}
+        <div className="flex items-center gap-2">
+          {onTogglePlay && (
+            <button
+              type="button"
+              onClick={onTogglePlay}
+              className="p-1.5 rounded bg-[#10141d] hover:bg-[#182335] text-[#00f0ff] border border-[#1e2736] hover:border-[#00f0ff]/50 transition-colors cursor-pointer flex items-center justify-center shadow-xs"
+              title={isPlaying ? 'Pause Audio (Space)' : 'Play Audio (Space)'}
+            >
+              {isPlaying ? (
+                <Pause className="w-3 h-3 fill-current" />
+              ) : (
+                <Play className="w-3 h-3 fill-current ml-0.5" />
+              )}
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 bg-[#06080c] px-3 py-1 rounded border border-[#1a2230]">
+            <span className="text-[#00f0ff] font-bold tracking-wider text-xs">
+              {formatTimecode(currentTime)}
+            </span>
+            <span className="text-zinc-600">/</span>
+            <span className="text-zinc-500 text-xs">
+              {formatTimecode(effectiveDuration)}
+            </span>
+          </div>
         </div>
 
         {/* Right Controls: Snapping & Zoom Slider */}
@@ -191,12 +226,12 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
             className="p-1 text-zinc-400 hover:text-[#00f0ff] transition-colors cursor-pointer"
             title="Magnet Snapping Toggle"
           >
-            <span className="text-xs">🧲</span>
+            <Magnet className="w-3.5 h-3.5" />
           </button>
 
           {/* Zoom Slider */}
           <div className="flex items-center gap-1.5 bg-[#0e121a] border border-[#1c2433] rounded px-2 py-1">
-            <span className="text-[10px] text-zinc-500">−</span>
+            <ZoomOut className="w-3 h-3 text-zinc-500" />
             <input
               type="range"
               min={1}
@@ -207,7 +242,7 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
               className="w-16 h-1 bg-[#1e2738] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
               title="Timeline Zoom Level"
             />
-            <span className="text-[10px] text-zinc-500">+</span>
+            <ZoomIn className="w-3 h-3 text-zinc-500" />
           </div>
         </div>
       </div>
@@ -224,57 +259,63 @@ export const TimelineDeck: React.FC<TimelineDeckProps> = ({ onTogglePlay, onSeek
           {/* Track 1: Video (Shader) */}
           <div className="h-16 border-b border-[#18202d] px-2.5 flex items-center justify-between bg-[#0b0e15]">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-zinc-400">🎬</span>
+              <Video className="w-3.5 h-3.5 text-[#00f0ff]" />
               <span className="font-bold text-zinc-300">Video 1</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsVideoMuted(!isVideoMuted)}
-                className={`p-1 rounded cursor-pointer ${isVideoMuted ? 'text-zinc-600' : 'text-[#00f0ff]'}`}
+                className={`p-1 rounded cursor-pointer transition-colors ${
+                  isVideoMuted ? 'text-zinc-600' : 'text-[#00f0ff]'
+                }`}
                 title="Toggle Visibility"
               >
-                👁
+                {isVideoMuted ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
-              <span className="text-[9px] text-zinc-600">🔒</span>
+              <Lock className="w-3 h-3 text-zinc-600" />
             </div>
           </div>
 
           {/* Track 2: Lyrics (Kinetic Typography) */}
           <div className="h-14 border-b border-[#18202d] px-2.5 flex items-center justify-between bg-[#0b0e15]">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-amber-400 font-bold">T</span>
+              <Type className="w-3.5 h-3.5 text-amber-400" />
               <span className="font-bold text-zinc-300">Kinetic 1</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsLyricsMuted(!isLyricsMuted)}
-                className={`p-1 rounded cursor-pointer ${isLyricsMuted ? 'text-zinc-600' : 'text-amber-400'}`}
+                className={`p-1 rounded cursor-pointer transition-colors ${
+                  isLyricsMuted ? 'text-zinc-600' : 'text-amber-400'
+                }`}
                 title="Toggle Lyric Overlay"
               >
-                👁
+                {isLyricsMuted ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
-              <span className="text-[9px] text-zinc-600">🔒</span>
+              <Lock className="w-3 h-3 text-zinc-600" />
             </div>
           </div>
 
           {/* Track 3: Audio (Master Waveform) */}
           <div className="h-16 border-b border-[#18202d] px-2.5 flex items-center justify-between bg-[#0b0e15]">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-emerald-400">🔊</span>
+              <Music className="w-3.5 h-3.5 text-emerald-400" />
               <span className="font-bold text-zinc-300">Audio 1</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsAudioMuted(!isAudioMuted)}
-                className={`p-1 rounded cursor-pointer ${isAudioMuted ? 'text-red-400' : 'text-emerald-400'}`}
+                className={`p-1 rounded cursor-pointer transition-colors ${
+                  isAudioMuted ? 'text-red-400' : 'text-emerald-400'
+                }`}
                 title="Mute Audio Track"
               >
-                {isAudioMuted ? '🔇' : '🔊'}
+                {isAudioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
               </button>
-              <span className="text-[9px] text-zinc-600">🔒</span>
+              <Lock className="w-3 h-3 text-zinc-600" />
             </div>
           </div>
         </div>

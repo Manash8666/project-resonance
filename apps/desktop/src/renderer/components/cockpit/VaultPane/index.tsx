@@ -1,6 +1,7 @@
 // apps/desktop/src/renderer/components/cockpit/VaultPane/index.tsx
 import React, { useRef, useState } from 'react';
 import { List } from 'react-window';
+import { LayoutGrid, List as LucideList, Search, Folder, Music2, Mic2, Disc3 } from 'lucide-react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 import { audioEngine } from '../../../audio/AudioEngine.js';
 import type { Track } from '../../../types/track.js';
@@ -66,16 +67,22 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
   const handleSelect = (track: Track) => {
     setSelectedTrackId(track.id);
     setSelectedTrack(track);
+    void audioEngine.loadTrack(track.file_path);
   };
 
-  const handleDoubleClick = (track: Track) => {
+  const handlePlay = (track: Track) => {
     handleSelect(track);
     if (onPlayTrack) {
       onPlayTrack(track);
     } else {
-      audioEngine.loadTrack(track.file_path);
-      void audioEngine.play();
+      void audioEngine.loadTrack(track.file_path).then(() => {
+        void audioEngine.play();
+      });
     }
+  };
+
+  const handleDoubleClick = (track: Track) => {
+    handlePlay(track);
   };
 
   const handleStartEdit = (id: number, field: string, initialVal: string) => {
@@ -210,21 +217,21 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
             <div className="flex items-center gap-1 bg-[#0e131b] p-0.5 rounded border border-[#1e2736]">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1 rounded cursor-pointer ${
+                className={`p-1 rounded cursor-pointer transition-colors ${
                   viewMode === 'grid' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
                 }`}
                 title="Grid Card View"
               >
-                ⊞
+                <LayoutGrid className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-1 rounded cursor-pointer ${
+                className={`p-1 rounded cursor-pointer transition-colors ${
                   viewMode === 'table' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
                 }`}
                 title="Table Row View"
               >
-                ☰
+                <LucideList className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -244,6 +251,7 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
               selectedTrackId={selectedTrackId}
               onSelect={handleSelect}
               onDoubleClick={handleDoubleClick}
+              onPlay={handlePlay}
             />
           ) : (
             /* Table Row View */

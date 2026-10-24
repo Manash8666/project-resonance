@@ -1,5 +1,17 @@
 // apps/desktop/src/renderer/components/cockpit/HeaderBar/index.tsx
 import React, { useState } from 'react';
+import {
+  Folder,
+  Music,
+  Type,
+  Layers,
+  Sparkles,
+  Palette,
+  LayoutGrid,
+  FolderPlus,
+  Maximize2,
+  ChevronDown,
+} from 'lucide-react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 
 export interface HeaderBarProps {
@@ -70,13 +82,13 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   };
 
   const ribbonTabs = [
-    { id: 'media', label: 'Media', icon: '📁' },
-    { id: 'audio', label: 'Audio', icon: '🎵' },
-    { id: 'titles', label: 'Titles', icon: '🔤' },
-    { id: 'transitions', label: 'Transitions', icon: '⧉' },
-    { id: 'effects', label: 'Effects', icon: '✨' },
-    { id: 'shaders', label: 'Shaders', icon: '🎨' },
-    { id: 'templates', label: 'Templates', icon: '📋' },
+    { id: 'media', label: 'Media', Icon: Folder },
+    { id: 'audio', label: 'Audio', Icon: Music },
+    { id: 'titles', label: 'Titles', Icon: Type },
+    { id: 'transitions', label: 'Transitions', Icon: Layers },
+    { id: 'effects', label: 'Effects', Icon: Sparkles },
+    { id: 'shaders', label: 'Shaders', Icon: Palette },
+    { id: 'templates', label: 'Templates', Icon: LayoutGrid },
   ];
 
   return (
@@ -153,11 +165,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <button
               type="button"
               onClick={() => setIsImmersive(true)}
-              className="h-6 px-2 bg-[#10131a] hover:bg-[#161d2b] border border-[#1f2736] hover:border-[#00f0ff]/60 text-[10px] text-zinc-300 hover:text-white rounded transition-all flex items-center gap-1 cursor-pointer"
+              className="h-6 px-2 bg-[#10131a] hover:bg-[#161d2b] border border-[#1f2736] hover:border-[#00f0ff]/60 text-[10px] text-zinc-300 hover:text-white rounded transition-all flex items-center gap-1.5 cursor-pointer"
               title="Enter Fullscreen 3D Visualizer (Hotkey: F)"
             >
-              <span className="text-[#00f0ff] text-xs">⛶</span>
-              <span>IMMERSIVE</span>
+              <Maximize2 className="w-3 h-3 text-[#00f0ff]" />
+              <span className="font-semibold">IMMERSIVE</span>
             </button>
 
             {/* Filmora Prominent Export Button */}
@@ -165,11 +177,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               type="button"
               onClick={() => setExportModalOpen(true)}
               disabled={!selectedTrack}
-              className="h-7 px-3 bg-[#00f0ff] hover:bg-[#38bdf8] text-black font-bold text-xs rounded transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(0,240,255,0.35)] active:scale-95"
+              className="h-7 px-3.5 bg-gradient-to-r from-[#00f0ff] to-[#00c8b3] hover:from-[#38bdf8] hover:to-[#00f0ff] text-black font-bold text-xs rounded-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(0,240,255,0.35)] active:scale-95"
               title="Render 4K / 60FPS Video Export"
             >
               <span>Export</span>
-              <span className="text-[10px]">⌵</span>
+              <ChevronDown className="w-3 h-3 stroke-[2.5]" />
             </button>
           </div>
 
@@ -225,6 +237,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="flex items-center gap-1">
           {ribbonTabs.map((tab) => {
             const isActive = activeRibbonTab === tab.id;
+            const TabIcon = tab.Icon;
             return (
               <button
                 key={tab.id}
@@ -235,7 +248,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                     : 'text-zinc-400 hover:text-white hover:bg-[#0f141f]'
                 }`}
               >
-                <span className="text-xs">{tab.icon}</span>
+                <TabIcon className="w-3.5 h-3.5" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -252,9 +265,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           <button
             onClick={handleScanFolder}
             disabled={isScanning}
-            className="px-2.5 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-[#00f0ff]/50 rounded text-[11px] text-zinc-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+            className="px-2.5 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-[#00f0ff]/50 rounded text-[11px] text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
-            <span>📂</span>
+            <FolderPlus className="w-3.5 h-3.5 text-[#00f0ff]" />
             <span>{isScanning ? 'Scanning...' : 'Scan Folder'}</span>
           </button>
         </div>

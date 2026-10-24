@@ -1,5 +1,19 @@
 // apps/desktop/src/renderer/components/cockpit/ForgeViewport/index.tsx
 import React, { useMemo, useState, useEffect } from 'react';
+import {
+  SkipBack,
+  Rewind,
+  Play,
+  Pause,
+  FastForward,
+  SkipForward,
+  Repeat,
+  Camera,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Grid,
+} from 'lucide-react';
 import { VisualizerScene } from 'visual-engine';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
 import { audioEngine } from '../../../audio/AudioEngine.js';
@@ -131,9 +145,20 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
   }, [activeLyrics, currentTime]);
 
   const handleTogglePlay = async () => {
-    const el = audioEngine.getAudioElement();
-    if ((!el.src || el.src === window.location.href) && selectedTrack) {
-      await audioEngine.loadTrack(selectedTrack.file_path);
+    let track = selectedTrack;
+    if (!track) {
+      const all = useResonanceStore.getState().tracks;
+      if (all.length > 0) {
+        track = all[0];
+        useResonanceStore.getState().setSelectedTrackId(track.id);
+        useResonanceStore.getState().setSelectedTrack(track);
+      }
+    }
+    if (track) {
+      const el = audioEngine.getAudioElement();
+      if (!el.src || el.src === window.location.href || !el.src.includes(track.file_path.substring(0, 20))) {
+        await audioEngine.loadTrack(track.file_path);
+      }
     }
     await audioEngine.toggle();
   };
@@ -201,10 +226,10 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsImmersive(true)}
-              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer"
+              className="p-1 text-zinc-400 hover:text-[#00f0ff] transition-colors cursor-pointer"
               title="Fullscreen Visualizer (F)"
             >
-              ⛶
+              <Maximize2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -225,23 +250,69 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
             isImmersive
               ? 'w-full h-full'
               : aspectMode === '9:16'
-              ? 'aspect-[9/16] h-[95%] max-w-sm rounded-lg border border-[#1e2736] shadow-[0_0_40px_rgba(0,0,0,0.8)] overflow-hidden'
+              ? 'aspect-[9/16] h-[95%] max-w-sm rounded-lg border-2 border-[#1e2736] shadow-[0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden bg-black'
               : aspectMode === '16:9'
               ? 'aspect-video w-[95%] max-h-full rounded-lg border border-[#1e2736] shadow-2xl overflow-hidden'
               : 'w-full h-full'
           }`}
         >
-          {/* WebGL Scene */}
-          <div className="absolute inset-0">
-            <VisualizerScene
-              audioElement={effectiveAudioElement}
-              dataTexture={audioEngine.getDataTexture() as any}
-              bandsRef={bandsRef}
-              albumArtUrl={internalCoverArt}
-            />
-          </div>
+          {aspectMode === '9:16' ? (
+            /* Filmora Reference Screenshot Match: Coastal Ocean & Mountain with bold golden yellow "JOURNEY" */
+            <div className="absolute inset-0 overflow-hidden flex flex-col justify-between">
+              {/* Sky and distant mountains */}
+              <div className="h-[45%] w-full bg-gradient-to-b from-[#38bdf8] via-[#67e8f9] to-[#bae6fd] relative overflow-hidden">
+                {/* Sunlight flare */}
+                <div className="absolute top-4 right-8 w-16 h-16 rounded-full bg-amber-200/60 blur-md pointer-events-none" />
+                {/* Mountain Ridge */}
+                <svg className="absolute bottom-0 w-full h-24 text-[#0f2e2b] opacity-90" viewBox="0 0 100 50" preserveAspectRatio="none">
+                  <polygon points="0,50 15,28 35,42 60,18 85,38 100,22 100,50" fill="currentColor" />
+                  <polygon points="20,50 45,32 75,48 100,30 100,50" fill="#091f1d" opacity="0.7" />
+                </svg>
+              </div>
 
-          {/* Kinetic Typography Overlay (Always in sync) */}
+              {/* Turquoise Coastal Ocean Waves with Sandy Beach */}
+              <div className="h-[55%] w-full bg-gradient-to-b from-[#0284c7] via-[#0ea5e9] to-[#fde047]/40 relative overflow-hidden">
+                {/* White water surf lines */}
+                <div className="absolute inset-0 opacity-40">
+                  <div className="w-[120%] h-6 rounded-full bg-white blur-xs -translate-x-4 translate-y-3" />
+                  <div className="w-[130%] h-8 rounded-full bg-white/70 blur-xs -translate-x-6 translate-y-12" />
+                  <div className="w-[110%] h-10 rounded-full bg-amber-100/60 blur-xs translate-y-24" />
+                </div>
+              </div>
+
+              {/* Center Golden Typography: "JOURNEY" (Pixel-accurate to Filmora screenshot) */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10 px-4">
+                <span
+                  className="text-2xl sm:text-3xl font-black tracking-wider text-[#facc15] drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] font-sans transform scale-y-110"
+                  style={{
+                    textShadow: '0 0 20px rgba(250,204,21,0.5), 0 4px 10px rgba(0,0,0,0.9)',
+                  }}
+                >
+                  JOURNEY
+                </span>
+              </div>
+
+              {/* Subtle Audio Reactive Ripple Overlay on the video */}
+              <div
+                className="absolute inset-0 pointer-events-none transition-opacity duration-75"
+                style={{
+                  boxShadow: isPlaying ? `inset 0 0 ${Math.round(bands.bass * 40)}px rgba(0,240,255,0.4)` : 'none',
+                }}
+              />
+            </div>
+          ) : (
+            /* 16:9 / Fill 3D WebGL Canvas */
+            <div className="absolute inset-0">
+              <VisualizerScene
+                audioElement={effectiveAudioElement}
+                dataTexture={audioEngine.getDataTexture() as any}
+                bandsRef={bandsRef}
+                albumArtUrl={internalCoverArt}
+              />
+            </div>
+          )}
+
+          {/* Kinetic Typography Overlay */}
           <KineticOverlay activeWord={activeWord} />
         </div>
 
@@ -282,58 +353,62 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
           </div>
 
           {/* Transport Controls (Step Back, Prev, Play/Pause, Next, Step Forward) */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {/* Step Frame Back */}
             <button
               onClick={() => audioEngine.seek(Math.max(0, currentTime - 1 / 30))}
-              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer text-zinc-400"
+              className="p-1.5 hover:text-[#00f0ff] hover:bg-[#141b26] rounded transition-colors cursor-pointer text-zinc-400"
               title="Step 1 Frame Back"
             >
-              ◂|
+              <SkipBack className="w-3.5 h-3.5" />
             </button>
 
             {/* Skip 5s Back */}
             <button
               onClick={() => audioEngine.seek(Math.max(0, currentTime - 5))}
-              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer text-zinc-400"
+              className="p-1.5 hover:text-[#00f0ff] hover:bg-[#141b26] rounded transition-colors cursor-pointer text-zinc-400"
               title="Skip 5s Back (J)"
             >
-              ◁
+              <Rewind className="w-3.5 h-3.5" />
             </button>
 
             {/* Main Play/Pause Button */}
             <button
               onClick={handleTogglePlay}
-              className="w-7 h-7 rounded-full bg-[#121824] hover:bg-[#1a2335] border border-[#232f42] hover:border-[#00f0ff] flex items-center justify-center text-[#00f0ff] cursor-pointer transition-all shadow-md active:scale-95"
+              className="w-8 h-8 rounded-full bg-[#121824] hover:bg-[#1a2335] border border-[#232f42] hover:border-[#00f0ff] flex items-center justify-center text-[#00f0ff] cursor-pointer transition-all shadow-md active:scale-95"
               title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             >
-              {isPlaying ? <span className="text-[10px]">❚❚</span> : <span className="text-[10px] pl-0.5">▶</span>}
+              {isPlaying ? (
+                <Pause className="w-3.5 h-3.5 fill-current" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+              )}
             </button>
 
             {/* Skip 5s Forward */}
             <button
               onClick={() => audioEngine.seek(Math.min(duration, currentTime + 5))}
-              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer text-zinc-400"
+              className="p-1.5 hover:text-[#00f0ff] hover:bg-[#141b26] rounded transition-colors cursor-pointer text-zinc-400"
               title="Skip 5s Forward (L)"
             >
-              ▷
+              <FastForward className="w-3.5 h-3.5" />
             </button>
 
             {/* Step Frame Forward */}
             <button
               onClick={() => audioEngine.seek(Math.min(duration, currentTime + 1 / 30))}
-              className="p-1 hover:text-[#00f0ff] transition-colors cursor-pointer text-zinc-400"
+              className="p-1.5 hover:text-[#00f0ff] hover:bg-[#141b26] rounded transition-colors cursor-pointer text-zinc-400"
               title="Step 1 Frame Forward"
             >
-              |▸
+              <SkipForward className="w-3.5 h-3.5" />
             </button>
 
             {/* Region Loop Marker */}
             <button
-              className="px-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer ml-1 text-xs"
-              title="Loop In/Out Region"
+              className="p-1.5 text-zinc-400 hover:text-[#00f0ff] hover:bg-[#141b26] rounded transition-colors cursor-pointer ml-1"
+              title="Loop Playback Region"
             >
-              {`{ }`}
+              <Repeat className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -351,15 +426,15 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
                   a.click();
                 }
               }}
-              className="p-1 text-zinc-400 hover:text-[#00f0ff] transition-colors cursor-pointer text-xs"
+              className="p-1.5 text-zinc-400 hover:text-[#00f0ff] hover:bg-[#141b26] rounded transition-colors cursor-pointer"
               title="Capture Viewport Snapshot"
             >
-              📷
+              <Camera className="w-3.5 h-3.5" />
             </button>
 
             {/* Volume */}
             <div className="flex items-center gap-1.5">
-              <span className="text-zinc-500 text-xs">🔊</span>
+              <Volume2 className="w-3.5 h-3.5 text-zinc-400" />
               <input
                 type="range"
                 min={0}
@@ -371,7 +446,7 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
                   setVolume(v);
                   audioEngine.setVolume(v);
                 }}
-                className="w-14 h-1 bg-[#1e2738] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
+                className="w-16 h-1 bg-[#1e2738] rounded-lg appearance-none cursor-pointer accent-[#00f0ff]"
                 title={`Volume: ${Math.round(volume * 100)}%`}
               />
             </div>
@@ -379,10 +454,10 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
             {/* Maximize to Immersive */}
             <button
               onClick={() => setIsImmersive(true)}
-              className="p-1 text-zinc-400 hover:text-[#00f0ff] transition-colors cursor-pointer text-xs"
+              className="p-1.5 text-zinc-400 hover:text-[#00f0ff] hover:bg-[#141b26] rounded transition-colors cursor-pointer"
               title="Enter Immersive 3D Visualizer (F)"
             >
-              ⛶
+              <Maximize2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
