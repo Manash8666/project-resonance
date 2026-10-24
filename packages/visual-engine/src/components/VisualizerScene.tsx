@@ -1,6 +1,7 @@
 // packages/visual-engine/src/components/VisualizerScene.tsx
 import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAudioTelemetry, AudioBands } from '../audio/AudioTelemetry.js';
 import { mechanicalEQVertexShader } from '../shaders/mechanicalEQ.vert.js';
@@ -179,6 +180,20 @@ export const VisualizerScene: React.FC<VisualizerSceneProps> = ({
 
         {/* Background Album Art Quad */}
         <BackgroundArtQuad url={albumArtUrl} />
+
+        {/* Cybernetic Infinite Cyan Grid fading into the black background */}
+        <Grid
+          infiniteGrid
+          cellSize={0.4}
+          cellThickness={0.8}
+          cellColor="#00ffff"
+          sectionSize={2.0}
+          sectionThickness={1.2}
+          sectionColor="#008080"
+          fadeDistance={25}
+          fadeStrength={1.5}
+          position={[0, -0.85, 0]}
+        />
 
         {/* 3D Mechanical Mesh */}
         <EqualizerMesh textureRef={textureRef} bandsRef={bandsRef} />

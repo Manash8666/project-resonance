@@ -18,7 +18,7 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
 
   const [searchResults, setSearchResults] = useState<Track[] | null>(null);
   const [activeFolder, setActiveFolder] = useState<'mine' | 'vocal' | 'instrumental' | 'playlists'>('mine');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid'); // Filmora grid by default
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid'); // Default visual grid
   const [aspectFilter, setAspectFilter] = useState<'all' | '16:9' | '9:16'>('all');
 
   React.useEffect(() => {
@@ -114,97 +114,98 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
   const instCount = baseTracks.length - vocalCount;
 
   return (
-    <div ref={containerRef} className="flex h-full bg-[#07090d] font-mono select-none overflow-hidden">
-      {/* ─── Left Filmora Sub-Sidebar Navigation (Width: 100px) ─── */}
-      <div className="w-28 bg-[#090c12] border-r border-[#1a2230] flex flex-col py-2 px-1.5 gap-1 shrink-0 text-[10px]">
-        <span className="text-[9px] font-bold text-zinc-500 uppercase px-2 mb-1 tracking-wider">
-          LIBRARY
+    <div ref={containerRef} className="flex h-full bg-[#050505] font-mono select-none overflow-hidden border-r border-[#27272a]">
+      {/* ─── Left Sub-Sidebar (Width: 100px) ─── */}
+      <div className="w-[100px] bg-[#0a0a0a] border-r border-[#27272a] flex flex-col py-2 px-1 gap-1 shrink-0 text-[10px]">
+        <span className="text-[9px] font-bold text-zinc-500 uppercase px-1.5 mb-1 tracking-widest">
+          VAULT
         </span>
 
         <button
           onClick={() => setActiveFolder('mine')}
-          className={`px-2 py-1.5 rounded text-left transition-all flex items-center justify-between cursor-pointer ${
+          className={`px-1.5 py-1.5 rounded text-left transition-all flex items-center justify-between cursor-pointer ${
             activeFolder === 'mine'
-              ? 'bg-[#14233a] text-[#00f0ff] font-bold shadow-xs'
-              : 'text-zinc-400 hover:text-white hover:bg-[#121722]'
+              ? 'bg-[#18181b] text-[#00ffff] border-l-2 border-[#00ffff] font-bold'
+              : 'text-zinc-400 hover:text-white hover:bg-[#111111]'
           }`}
         >
-          <span>Mine</span>
-          <span className="text-[9px] text-zinc-500">{baseTracks.length}</span>
+          <span className="truncate">Mine</span>
+          <span className="text-[9px] text-zinc-500 font-mono">{baseTracks.length}</span>
         </button>
 
         <button
           onClick={() => setActiveFolder('vocal')}
-          className={`px-2 py-1.5 rounded text-left transition-all flex items-center justify-between cursor-pointer ${
+          className={`px-1.5 py-1.5 rounded text-left transition-all flex items-center justify-between cursor-pointer ${
             activeFolder === 'vocal'
-              ? 'bg-[#14233a] text-[#00f0ff] font-bold shadow-xs'
-              : 'text-zinc-400 hover:text-white hover:bg-[#121722]'
+              ? 'bg-[#18181b] text-[#00ffff] border-l-2 border-[#00ffff] font-bold'
+              : 'text-zinc-400 hover:text-white hover:bg-[#111111]'
           }`}
         >
-          <span>Vocals</span>
-          <span className="text-[9px] text-fuchsia-400 font-bold">{vocalCount}</span>
+          <span className="truncate">Vocals</span>
+          <span className="text-[9px] text-amber-400 font-mono font-bold">{vocalCount}</span>
         </button>
 
         <button
           onClick={() => setActiveFolder('instrumental')}
-          className={`px-2 py-1.5 rounded text-left transition-all flex items-center justify-between cursor-pointer ${
+          className={`px-1.5 py-1.5 rounded text-left transition-all flex items-center justify-between cursor-pointer ${
             activeFolder === 'instrumental'
-              ? 'bg-[#14233a] text-[#00f0ff] font-bold shadow-xs'
-              : 'text-zinc-400 hover:text-white hover:bg-[#121722]'
+              ? 'bg-[#18181b] text-[#00ffff] border-l-2 border-[#00ffff] font-bold'
+              : 'text-zinc-400 hover:text-white hover:bg-[#111111]'
           }`}
         >
-          <span>Beats</span>
-          <span className="text-[9px] text-emerald-400 font-bold">{instCount}</span>
+          <span className="truncate">Beats</span>
+          <span className="text-[9px] text-emerald-400 font-mono font-bold">{instCount}</span>
         </button>
 
         <button
           onClick={() => setActiveFolder('playlists')}
-          className={`px-2 py-1.5 rounded text-left transition-all flex items-center justify-between cursor-pointer ${
+          className={`px-1.5 py-1.5 rounded text-left transition-all flex items-center justify-between cursor-pointer ${
             activeFolder === 'playlists'
-              ? 'bg-[#14233a] text-[#00f0ff] font-bold shadow-xs'
-              : 'text-zinc-400 hover:text-white hover:bg-[#121722]'
+              ? 'bg-[#18181b] text-[#00ffff] border-l-2 border-[#00ffff] font-bold'
+              : 'text-zinc-400 hover:text-white hover:bg-[#111111]'
           }`}
         >
-          <span>Playlists</span>
-          <span className="text-[9px] text-zinc-600">0</span>
+          <span className="truncate">Playlists</span>
+          <span className="text-[9px] text-zinc-600 font-mono">0</span>
         </button>
       </div>
 
-      {/* ─── Main Asset Browser Body (Search Bar, Filters, Cards/Table, Footer) ─── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#07090d]">
+      {/* ─── Main Asset Browser Body ─── */}
+      <div className="flex-1 flex flex-col min-w-0 bg-[#050505]">
         {/* Top Search Bar & Filter Header */}
-        <div className="p-2.5 bg-[#090c12] border-b border-[#1a2230] flex flex-col gap-2 shrink-0">
+        <div className="p-2 bg-[#0a0a0a] border-b border-[#27272a] flex flex-col gap-1.5 shrink-0">
           {/* Quick Search */}
-          <div className="relative">
+          <div className="relative flex items-center">
+            <Search className="w-3.5 h-3.5 absolute left-2 text-zinc-500 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search audio, templates, clips..."
-              className="w-full bg-[#0e131b] border border-[#1e2736] focus:border-[#00f0ff] rounded px-3 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none transition-colors"
+              placeholder="Search audio assets..."
+              className="w-full bg-[#111111] border border-[#27272a] focus:border-[#00ffff] rounded pl-7 pr-7 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-0 bottom-0 flex items-center px-1 text-xs text-zinc-500 hover:text-[#00f0ff]"
+                className="absolute right-2 top-0 bottom-0 flex items-center px-1 text-xs text-zinc-500 hover:text-[#00ffff] cursor-pointer"
               >
                 ✕
               </button>
             )}
           </div>
 
-          {/* Filter Pills & View Switcher (Filmora style) */}
+          {/* Filter Pills & View Switcher */}
           <div className="flex items-center justify-between text-[10px]">
-            <div className="flex items-center gap-1.5">
-              <span className="text-zinc-500">Aspect:</span>
+            <div className="flex items-center gap-1">
+              <span className="text-zinc-500 uppercase tracking-wider text-[9px]">Aspect:</span>
               {(['all', '16:9', '9:16'] as const).map((asp) => (
                 <button
                   key={asp}
                   onClick={() => setAspectFilter(asp)}
-                  className={`px-1.5 py-0.5 rounded uppercase cursor-pointer ${
+                  className={`px-1.5 py-0.2 rounded uppercase cursor-pointer transition-colors ${
                     aspectFilter === asp
-                      ? 'bg-[#162335] text-[#00f0ff] border border-[#00f0ff]/40 font-bold'
+                      ? 'bg-[#18181b] text-[#00ffff] border border-[#00ffff]/50 font-bold'
                       : 'text-zinc-400 hover:text-white'
                   }`}
                 >
@@ -214,24 +215,24 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
             </div>
 
             {/* View Mode Toggle: Grid vs Table */}
-            <div className="flex items-center gap-1 bg-[#0e131b] p-0.5 rounded border border-[#1e2736]">
+            <div className="flex items-center gap-1 bg-[#111111] p-0.5 rounded border border-[#27272a]">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1 rounded cursor-pointer transition-colors ${
-                  viewMode === 'grid' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
+                  viewMode === 'grid' ? 'bg-[#00ffff] text-black font-bold' : 'text-zinc-400 hover:text-white'
                 }`}
                 title="Grid Card View"
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
+                <LayoutGrid className="w-3 h-3" />
               </button>
               <button
                 onClick={() => setViewMode('table')}
                 className={`p-1 rounded cursor-pointer transition-colors ${
-                  viewMode === 'table' ? 'bg-[#00f0ff] text-black font-bold' : 'text-zinc-400 hover:text-white'
+                  viewMode === 'table' ? 'bg-[#00ffff] text-black font-bold' : 'text-zinc-400 hover:text-white'
                 }`}
                 title="Table Row View"
               >
-                <LucideList className="w-3.5 h-3.5" />
+                <LucideList className="w-3 h-3" />
               </button>
             </div>
           </div>
@@ -245,7 +246,6 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
               <span className="text-[10px] text-zinc-700 mt-1">Use "Scan Folder" in top bar to index audio.</span>
             </div>
           ) : viewMode === 'grid' ? (
-            /* Filmora Card Grid */
             <VaultCardGrid
               tracks={filteredTracks}
               selectedTrackId={selectedTrackId}
@@ -256,8 +256,8 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
           ) : (
             /* Table Row View */
             <div className="h-full flex flex-col">
-              <div className="h-7 bg-[#0b0e14] border-b border-[#1c222c] flex items-center px-3 text-[9px] font-bold text-zinc-500 uppercase tracking-wider shrink-0">
-                <span className="w-10">#</span>
+              <div className="h-7 bg-[#0a0a0a] border-b border-[#27272a] flex items-center px-3 text-[9px] font-bold text-zinc-500 uppercase tracking-wider shrink-0">
+                <span className="w-8">#</span>
                 <span className="flex-1">Title</span>
                 <span className="w-24">Artist</span>
                 <span className="w-14 text-right">Time</span>
@@ -297,9 +297,9 @@ export const VaultPane: React.FC<{ onPlayTrack?: (track: Track) => void }> = ({ 
         </div>
 
         {/* Vault Footer Telemetry Bar */}
-        <div className="h-7 bg-[#080a0e] border-t border-[#1c222c] px-3 flex items-center justify-between text-[10px] text-zinc-500 font-mono shrink-0">
+        <div className="h-6 bg-[#0a0a0a] border-t border-[#27272a] px-3 flex items-center justify-between text-[9px] text-zinc-500 font-mono shrink-0">
           <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00f0ff]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00ffff]" />
             <span>{filteredTracks.length} ASSETS READY</span>
           </span>
           <span className="text-zinc-600">|</span>

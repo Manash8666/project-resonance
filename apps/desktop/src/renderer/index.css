@@ -4,18 +4,19 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-base:     #08090a;
-  --bg-surface:  #0e1013;
-  --bg-elevated: #16191f;
-  --bg-card:     #1a1e24;
-  --border:      #232832;
-  --border-light:#2f3644;
-  --accent:      #00f0ff;
-  --accent-glow: rgba(0, 240, 255, 0.2);
-  --accent-dim:  rgba(0, 240, 255, 0.1);
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #475569;
+  --bg-void:        #050505;
+  --bg-base:        #0a0a0a;
+  --bg-elevated:    #111111;
+  --bg-panel:       #18181b;
+  --border-subtle:  #27272a;
+  --border-light:   #3f3f46;
+  --accent-cyan:    #00ffff;
+  --accent-cyan-dim:rgba(0, 255, 255, 0.15);
+  --accent-amber:   #f59e0b;
+  --accent-red:     #ef4444;
+  --text-primary:   #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted:     #71717a;
   --font-mono: 'JetBrains Mono', monospace;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -25,10 +26,10 @@ html, body, #root {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: var(--bg-base);
+  background-color: var(--bg-void);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 12px;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
@@ -42,26 +43,35 @@ html, body, #root {
   -webkit-app-region: no-drag;
 }
 
+/* Recessed panel shadow & active glow utilities */
+.panel-recessed {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.panel-active-glow {
+  box-shadow: 0 0 16px rgba(0, 255, 255, 0.15), inset 0 0 8px rgba(0, 255, 255, 0.05);
+}
+
 /* Custom Scrollbar for virtualized grid and sidebars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #090a0d;
+  background: #0a0a0a;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e2430;
-  border-radius: 3px;
+  background: #27272a;
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2e384b;
+  background: #3f3f46;
 }
 
 /* Custom pulsing animation for scan progress */
 @keyframes neon-pulse {
-  0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4)); }
-  50% { opacity: 1; filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.8)); }
+  0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.4)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 16px rgba(0, 255, 255, 0.8)); }
 }
 
 .animate-neon-pulse {

@@ -175,40 +175,40 @@ const App: React.FC = () => {
         />
       </div>
 
-      {/* 2. Filmora-Style Multi-Pane Resizable Layout (Vertical Split: Upper Workspace + Bottom Timeline) */}
-      <div className="flex-1 min-h-0 relative">
+      {/* 2. DAW Grid Multi-Pane Resizable Layout */}
+      <div className="flex-1 min-h-0 relative bg-[#050505]">
         <Group
           orientation="vertical"
-          id="resonance-filmora-main-v3"
+          id="resonance-daw-grid-main"
           defaultLayout={{
-            'upper-workspace-panel-v3': 58,
-            'timeline-panel-v3': 42,
+            'upper-workspace-panel': 68,
+            'timeline-panel': 32,
           }}
           className="h-full w-full"
         >
-          {/* Upper Workspace Panel (Horizontal Split: Asset Browser, Player Monitor, Inspector) */}
+          {/* Upper Workspace Panel (Horizontal Split: The Vault 25%, The Forge 50%, The Rack 25%) */}
           <Panel
-            defaultSize="58%"
+            defaultSize="68%"
             minSize="30%"
-            id="upper-workspace-panel-v3"
+            id="upper-workspace-panel"
           >
             <Group
               orientation="horizontal"
-              id="upper-workspace-group-v3"
+              id="upper-workspace-group"
               defaultLayout={{
-                'vault-panel-v3': 36,
-                'forge-panel-v3': 40,
-                'inspector-panel-v3': 24,
+                'vault-panel': 25,
+                'forge-panel': 50,
+                'inspector-panel': 25,
               }}
               className="h-full w-full"
             >
-              {/* Upper Left: Media / Asset Browser (VaultPane) */}
+              {/* Upper Left: The Vault (Visual Asset Grid - 25% default) */}
               <Panel
-                defaultSize="36%"
-                minSize="22%"
-                maxSize="50%"
+                defaultSize="25%"
+                minSize="18%"
+                maxSize="40%"
                 collapsible
-                id="vault-panel-v3"
+                id="vault-panel"
                 className={`transition-opacity duration-300 ${
                   isImmersive ? 'opacity-0 pointer-events-none' : 'opacity-100'
                 }`}
@@ -218,38 +218,38 @@ const App: React.FC = () => {
 
               {/* Resizer Handle 1 (Vault <-> Forge) */}
               <Separator
-                className={`w-1.5 bg-[#0b0e14] hover:bg-[#00f0ff]/40 transition-colors flex items-center justify-center cursor-col-resize group ${
+                className={`w-1 bg-[#18181b] hover:bg-[#00ffff]/40 hover:shadow-[0_0_8px_rgba(0,255,255,0.4)] transition-all flex items-center justify-center cursor-col-resize group border-x border-[#27272a]/50 ${
                   isImmersive ? 'opacity-0 pointer-events-none' : 'opacity-100'
                 }`}
               >
-                <div className="h-6 w-0.5 bg-[#1b2330] group-hover:bg-[#00f0ff] rounded" />
+                <div className="h-8 w-0.5 bg-[#27272a] group-hover:bg-[#00ffff] rounded transition-colors" />
               </Separator>
 
-              {/* Upper Center: The Player Viewport Monitor (ForgeViewport) */}
+              {/* Upper Center: The Forge Viewport (50% default) */}
               <Panel
-                defaultSize="40%"
-                minSize="25%"
-                id="forge-panel-v3"
+                defaultSize="50%"
+                minSize="30%"
+                id="forge-panel"
               >
                 <ForgeViewport audioElement={audioEngine.getAudioElement()} />
               </Panel>
 
               {/* Resizer Handle 2 (Forge <-> Inspector) */}
               <Separator
-                className={`w-1.5 bg-[#0b0e14] hover:bg-[#00f0ff]/40 transition-colors flex items-center justify-center cursor-col-resize group ${
+                className={`w-1 bg-[#18181b] hover:bg-[#00ffff]/40 hover:shadow-[0_0_8px_rgba(0,255,255,0.4)] transition-all flex items-center justify-center cursor-col-resize group border-x border-[#27272a]/50 ${
                   isImmersive ? 'opacity-0 pointer-events-none' : 'opacity-100'
                 }`}
               >
-                <div className="h-6 w-0.5 bg-[#1b2330] group-hover:bg-[#00f0ff] rounded" />
+                <div className="h-8 w-0.5 bg-[#27272a] group-hover:bg-[#00ffff] rounded transition-colors" />
               </Separator>
 
-              {/* Upper Right: Inspector & Properties Rack (InspectorRack) */}
+              {/* Upper Right: The Rack Inspector (25% default) */}
               <Panel
-                defaultSize="24%"
+                defaultSize="25%"
                 minSize="18%"
-                maxSize="38%"
+                maxSize="40%"
                 collapsible
-                id="inspector-panel-v3"
+                id="inspector-panel"
                 className={`transition-opacity duration-300 ${
                   isImmersive ? 'opacity-0 pointer-events-none' : 'opacity-100'
                 }`}
@@ -261,19 +261,19 @@ const App: React.FC = () => {
 
           {/* Horizontal Resizer Separator between Upper Workspace & Bottom Timeline */}
           <Separator
-            className={`h-1.5 bg-[#0b0e14] hover:bg-[#00f0ff]/40 transition-colors flex items-center justify-center cursor-row-resize group z-20 ${
+            className={`h-1 bg-[#18181b] hover:bg-[#00ffff]/40 hover:shadow-[0_0_8px_rgba(0,255,255,0.4)] transition-all flex items-center justify-center cursor-row-resize group z-20 border-y border-[#27272a]/50 ${
               isImmersive ? 'opacity-0 pointer-events-none' : 'opacity-100'
             }`}
           >
-            <div className="w-10 h-0.5 bg-[#1b2330] group-hover:bg-[#00f0ff] rounded" />
+            <div className="w-12 h-0.5 bg-[#27272a] group-hover:bg-[#00ffff] rounded transition-colors" />
           </Separator>
 
-          {/* Lower Workspace Panel: Multi-Track NLE Timeline Deck */}
+          {/* Lower Workspace Panel: The Sequence Multi-Track NLE Timeline */}
           <Panel
-            defaultSize="42%"
+            defaultSize="32%"
             minSize="20%"
-            maxSize="65%"
-            id="timeline-panel-v3"
+            maxSize="60%"
+            id="timeline-panel"
             className={`transition-all duration-300 ${
               isImmersive ? 'opacity-0 pointer-events-none' : 'opacity-100'
             }`}

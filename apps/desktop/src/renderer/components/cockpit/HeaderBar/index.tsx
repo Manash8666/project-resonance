@@ -1,5 +1,5 @@
 // apps/desktop/src/renderer/components/cockpit/HeaderBar/index.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Folder,
   Music,
@@ -11,8 +11,13 @@ import {
   FolderPlus,
   Maximize2,
   ChevronDown,
+  Play,
+  Pause,
+  Square,
+  Activity,
 } from 'lucide-react';
 import { useResonanceStore } from '../../../store/useResonanceStore.js';
+import { audioEngine } from '../../../audio/AudioEngine.js';
 
 export interface HeaderBarProps {
   onScan?: () => void;
@@ -34,12 +39,35 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   const autoImmersiveEnabled = useResonanceStore((s) => s.autoImmersiveEnabled);
   const setAutoImmersiveEnabled = useResonanceStore((s) => s.setAutoImmersiveEnabled);
   const setIsImmersive = useResonanceStore((s) => s.setIsImmersive);
+  const isPlaying = useResonanceStore((s) => s.isPlaying);
+  const currentTime = useResonanceStore((s) => s.currentTime);
+  const duration = useResonanceStore((s) => s.duration);
 
   const [scanStatus, setScanStatus] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [fps, setFps] = useState<number>(60.0);
 
-  React.useEffect(() => {
+  // Measure active rendering FPS dynamically
+  useEffect(() => {
+    let frameCount = 0;
+    let lastTime = performance.now();
+    let animId: number;
+
+    const loop = (now: number) => {
+      frameCount++;
+      if (now - lastTime >= 1000) {
+        setFps(Math.round((frameCount * 1000) / (now - lastTime) * 10) / 10);
+        frameCount = 0;
+        lastTime = now;
+      }
+      animId = requestAnimationFrame(loop);
+    };
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  useEffect(() => {
     window.resonance?.isWindowMaximized?.().then((max) => {
       if (typeof max === 'boolean') setIsMaximized(max);
     });
@@ -81,6 +109,32 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     }
   };
 
+  const handleGlobalPlayPause = async () => {
+    if (!selectedTrack) {
+      const all = useResonanceStore.getState().tracks;
+      if (all.length > 0) {
+        useResonanceStore.getState().setSelectedTrackId(all[0].id);
+        useResonanceStore.getState().setSelectedTrack(all[0]);
+        await audioEngine.loadTrack(all[0].file_path);
+      }
+    }
+    await audioEngine.toggle();
+  };
+
+  const handleGlobalStop = () => {
+    audioEngine.pause();
+    audioEngine.seek(0);
+  };
+
+  const formatSMPTE = (seconds: number): string => {
+    if (isNaN(seconds) || seconds < 0) return '00:00:00:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const frames = Math.floor((seconds % 1) * 30);
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
+  };
+
   const ribbonTabs = [
     { id: 'media', label: 'Media', Icon: Folder },
     { id: 'audio', label: 'Audio', Icon: Music },
@@ -92,33 +146,33 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   ];
 
   return (
-    <header className="flex flex-col bg-[#080a0e] border-b border-[#1c222c] font-mono select-none z-20 shrink-0">
-      {/* ─── Level 1: Application Menu Bar & Global Window Controls ─── */}
+    <header className="flex flex-col bg-[#050505] border-b border-[#27272a] font-mono select-none z-20 shrink-0">
+      {/* ─── Level 1: Application Menu Bar & Global Window Controls (32px) ─── */}
       <div
         onDoubleClick={() => window.resonance?.maximizeWindow?.()}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-        className="h-9 border-b border-[#141b26] flex items-center justify-between pl-3 pr-0 overflow-hidden"
+        className="h-8 border-b border-[#18181b] flex items-center justify-between pl-3 pr-0 overflow-hidden"
       >
         {/* Brand Logo & Menus */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff] animate-pulse" />
-            <span className="font-bold tracking-wider text-xs bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent whitespace-nowrap">
+            <div className="w-2 h-2 rounded-full bg-[#00ffff] shadow-[0_0_8px_#00ffff] animate-pulse" />
+            <span className="font-bold tracking-widest text-[11px] uppercase bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent whitespace-nowrap">
               PROJECT RESONANCE
             </span>
           </div>
 
-          {/* Filmora-style Dropdown Menus (No-drag) */}
+          {/* Menus (No-drag) */}
           <div
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            className="flex items-center gap-0.5 text-[11px] text-zinc-400 ml-2"
+            className="hidden sm:flex items-center gap-0.5 text-[11px] text-zinc-400 ml-1"
           >
             {['File', 'Edit', 'Tools', 'View', 'Audio', 'Help'].map((item) => (
               <button
                 key={item}
                 onClick={() => setActiveMenu(activeMenu === item ? null : item)}
-                className={`px-2 py-1 rounded hover:bg-[#161d2b] hover:text-white transition-colors cursor-pointer ${
-                  activeMenu === item ? 'bg-[#161d2b] text-white' : ''
+                className={`px-1.5 py-0.5 rounded hover:bg-[#18181b] hover:text-white transition-colors cursor-pointer text-[10px] uppercase tracking-wider ${
+                  activeMenu === item ? 'bg-[#18181b] text-white' : ''
                 }`}
               >
                 {item}
@@ -127,35 +181,73 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
         </div>
 
-        {/* Center Project Title (Filmora style) */}
-        <div className="hidden lg:flex items-center gap-2 text-xs text-zinc-400 truncate max-w-sm">
-          <span className="text-zinc-600">Session:</span>
-          <span className="text-zinc-200 font-bold truncate">
-            {selectedTrack ? selectedTrack.title || selectedTrack.file_name : 'Untitled Audio Space'}
-          </span>
-          <span className="text-[10px] text-zinc-600">v0.1.0-RC</span>
+        {/* Center: Global Transport + SMPTE Timecode (No-drag) */}
+        <div
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          className="flex items-center gap-2"
+        >
+          {/* Global Play / Pause / Stop */}
+          <div className="flex items-center bg-[#0a0a0a] border border-[#27272a] rounded p-0.5 shadow-inner">
+            <button
+              type="button"
+              onClick={handleGlobalPlayPause}
+              className={`p-1 rounded cursor-pointer transition-colors ${
+                isPlaying ? 'bg-[#00ffff] text-black' : 'text-zinc-300 hover:text-[#00ffff] hover:bg-[#18181b]'
+              }`}
+              title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+            >
+              {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
+            </button>
+            <button
+              type="button"
+              onClick={handleGlobalStop}
+              className="p-1 rounded text-zinc-400 hover:text-red-400 hover:bg-[#18181b] cursor-pointer transition-colors"
+              title="Stop & Return to Zero"
+            >
+              <Square className="w-3 h-3 fill-current" />
+            </button>
+          </div>
+
+          {/* Session Title & Timecode */}
+          <div className="flex items-center gap-2 bg-[#0a0a0a] border border-[#27272a] rounded px-2.5 py-0.5 text-[10px]">
+            <span className="text-zinc-500 hidden md:inline">Session:</span>
+            <span className="text-zinc-200 font-bold max-w-[140px] truncate">
+              {selectedTrack ? selectedTrack.title || selectedTrack.file_name : 'No Track'}
+            </span>
+            <span className="text-zinc-600">|</span>
+            <span className="text-[#00ffff] font-mono tracking-wider font-bold">
+              {formatSMPTE(currentTime)}
+            </span>
+          </div>
         </div>
 
         {/* Right Action Utilities & Window Controls */}
         <div className="flex items-center shrink-0">
           <div
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            className="flex items-center gap-2 mr-3"
+            className="flex items-center gap-2 mr-2"
           >
+            {/* Real-time FPS Counter Badge */}
+            <div className="hidden lg:flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0a0a0a] border border-[#27272a] text-[10px] text-zinc-400">
+              <Activity className="w-3 h-3 text-[#00ffff]" />
+              <span className="font-mono text-[#00ffff] font-bold">{fps.toFixed(1)}</span>
+              <span className="text-[9px] text-zinc-500">FPS</span>
+            </div>
+
             {/* Auto-Immersive Toggle */}
             <button
               type="button"
               onClick={() => setAutoImmersiveEnabled(!autoImmersiveEnabled)}
-              className={`h-6 px-2 rounded border text-[10px] tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-5 px-1.5 rounded border text-[9px] tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
                 autoImmersiveEnabled
-                  ? 'bg-[#00f0ff]/10 border-[#00f0ff]/50 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.2)]'
-                  : 'bg-[#10131a] border-[#1f2736] text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#00ffff]/10 border-[#00ffff]/50 text-[#00ffff]'
+                  : 'bg-[#0a0a0a] border-[#27272a] text-zinc-500 hover:text-zinc-300'
               }`}
               title="Auto-enter Immersive Mode on idle playback (20s inactivity)"
             >
               <span
                 className={`w-1 h-1 rounded-full ${
-                  autoImmersiveEnabled ? 'bg-[#00f0ff] animate-pulse' : 'bg-zinc-600'
+                  autoImmersiveEnabled ? 'bg-[#00ffff] animate-pulse' : 'bg-zinc-600'
                 }`}
               />
               <span>AUTO</span>
@@ -165,35 +257,35 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <button
               type="button"
               onClick={() => setIsImmersive(true)}
-              className="h-6 px-2 bg-[#10131a] hover:bg-[#161d2b] border border-[#1f2736] hover:border-[#00f0ff]/60 text-[10px] text-zinc-300 hover:text-white rounded transition-all flex items-center gap-1.5 cursor-pointer"
+              className="h-5 px-2 bg-[#0a0a0a] hover:bg-[#18181b] border border-[#27272a] hover:border-[#00ffff]/60 text-[9px] text-zinc-300 hover:text-white rounded transition-all flex items-center gap-1 cursor-pointer"
               title="Enter Fullscreen 3D Visualizer (Hotkey: F)"
             >
-              <Maximize2 className="w-3 h-3 text-[#00f0ff]" />
+              <Maximize2 className="w-2.5 h-2.5 text-[#00ffff]" />
               <span className="font-semibold">IMMERSIVE</span>
             </button>
 
-            {/* Filmora Prominent Export Button */}
+            {/* Export Button */}
             <button
               type="button"
               onClick={() => setExportModalOpen(true)}
               disabled={!selectedTrack}
-              className="h-7 px-3.5 bg-gradient-to-r from-[#00f0ff] to-[#00c8b3] hover:from-[#38bdf8] hover:to-[#00f0ff] text-black font-bold text-xs rounded-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(0,240,255,0.35)] active:scale-95"
+              className="h-6 px-2.5 bg-gradient-to-r from-[#00ffff] to-[#00c8b3] hover:from-[#38bdf8] hover:to-[#00ffff] text-black font-bold text-[10px] rounded transition-all flex items-center gap-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(0,255,255,0.25)] active:scale-95"
               title="Render 4K / 60FPS Video Export"
             >
               <span>Export</span>
-              <ChevronDown className="w-3 h-3 stroke-[2.5]" />
+              <ChevronDown className="w-2.5 h-2.5 stroke-[2.5]" />
             </button>
           </div>
 
           {/* Window Controls (Minimize, Maximize, Close) */}
           <div
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            className="flex items-center h-9 border-l border-[#1c222c] shrink-0"
+            className="flex items-center h-8 border-l border-[#27272a] shrink-0"
           >
             <button
               type="button"
               onClick={() => window.resonance?.minimizeWindow?.()}
-              className="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               title="Minimize"
             >
               <svg width="10" height="1" viewBox="0 0 10 1" fill="none">
@@ -204,7 +296,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <button
               type="button"
               onClick={() => window.resonance?.maximizeWindow?.()}
-              className="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               title={isMaximized ? 'Restore Down' : 'Maximize'}
             >
               {isMaximized ? (
@@ -221,7 +313,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <button
               type="button"
               onClick={() => window.resonance?.closeWindow?.()}
-              className="w-10 h-9 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
+              className="w-9 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
               title="Close (Alt+F4)"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -232,8 +324,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
       </div>
 
-      {/* ─── Level 2: Filmora-Style Module Ribbon Tabs ─── */}
-      <div className="h-10 bg-[#07090d] px-3 flex items-center justify-between border-b border-[#141b26] overflow-x-auto">
+      {/* ─── Level 2: Module Ribbon Tabs (32px) ─── */}
+      <div className="h-8 bg-[#0a0a0a] px-3 flex items-center justify-between border-b border-[#27272a] overflow-x-auto">
         <div className="flex items-center gap-1">
           {ribbonTabs.map((tab) => {
             const isActive = activeRibbonTab === tab.id;
@@ -242,32 +334,32 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <button
                 key={tab.id}
                 onClick={() => onRibbonTabChange?.(tab.id)}
-                className={`h-8 px-3 rounded flex items-center gap-1.5 text-xs font-medium transition-all cursor-pointer ${
+                className={`h-6 px-2.5 rounded flex items-center gap-1.5 text-[11px] uppercase tracking-wider transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#14233a] text-[#00f0ff] border-b-2 border-b-[#00f0ff] font-bold shadow-xs'
-                    : 'text-zinc-400 hover:text-white hover:bg-[#0f141f]'
+                    ? 'bg-[#18181b] text-[#00ffff] border-b-2 border-b-[#00ffff] font-bold shadow-xs'
+                    : 'text-zinc-400 hover:text-white hover:bg-[#111111]'
                 }`}
               >
-                <TabIcon className="w-3.5 h-3.5" />
+                <TabIcon className="w-3 h-3" />
                 <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Scan Folder Action Button in Ribbon */}
+        {/* Scan Folder Action Button */}
         <div className="flex items-center gap-2">
           {scanStatus && (
-            <span className="text-[10px] text-[#00f0ff] animate-pulse mr-2 hidden md:inline">
+            <span className="text-[10px] text-[#00ffff] animate-pulse mr-2 hidden md:inline">
               {scanStatus}
             </span>
           )}
           <button
             onClick={handleScanFolder}
             disabled={isScanning}
-            className="px-2.5 py-1 bg-[#10141d] hover:bg-[#161d2b] border border-[#1e2736] hover:border-[#00f0ff]/50 rounded text-[11px] text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="px-2 py-0.5 bg-[#111111] hover:bg-[#18181b] border border-[#27272a] hover:border-[#00ffff]/50 rounded text-[10px] uppercase text-zinc-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
           >
-            <FolderPlus className="w-3.5 h-3.5 text-[#00f0ff]" />
+            <FolderPlus className="w-3 h-3 text-[#00ffff]" />
             <span>{isScanning ? 'Scanning...' : 'Scan Folder'}</span>
           </button>
         </div>

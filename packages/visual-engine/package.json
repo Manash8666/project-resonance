@@ -17,6 +17,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.0",
     "three": "^0.184.0"
   },
