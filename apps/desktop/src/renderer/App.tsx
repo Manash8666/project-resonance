@@ -38,7 +38,7 @@ const App: React.FC = () => {
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
         setIsImmersive(true);
-      }, 4000); // 4 seconds of inactivity triggers immersive visualizer
+      }, 20000); // 20 seconds of user inactivity when explicitly enabled
     };
 
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart'];

@@ -148,8 +148,8 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
         <TelemetryHUD bass={bands.bass} mid={bands.mid} treble={bands.treble} />
       )}
 
-      {/* Quick Immersive Toggle Action (Top-Right, Hidden in Immersive Mode) */}
-      {!isImmersive && (
+      {/* Quick Immersive Toggle Action (Top-Right) */}
+      {!isImmersive ? (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -160,6 +160,23 @@ export const ForgeViewport: React.FC<ForgeViewportProps> = ({
         >
           <span className="text-xs group-hover:scale-110 transition-transform">⛶</span>
           <span className="text-[10px] tracking-wider font-semibold">IMMERSIVE</span>
+        </button>
+      ) : (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsImmersive(false);
+          }}
+          className={`absolute top-4 right-4 z-50 px-3 py-1.5 bg-[#080c14]/90 hover:bg-[#00f0ff]/20 border border-[#00f0ff]/40 hover:border-[#00f0ff] rounded-md text-[11px] font-mono text-zinc-200 hover:text-[#00f0ff] transition-all duration-300 cursor-pointer backdrop-blur-md shadow-[0_0_15px_rgba(0,240,255,0.2)] flex items-center space-x-2 ${
+            isHudVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
+          }`}
+          title="Return to DAW Cockpit (Press 'ESC' or 'F')"
+        >
+          <span className="text-xs">⎋</span>
+          <span className="text-[10px] tracking-wider font-semibold">RETURN TO DAW</span>
+          <kbd className="px-1.5 py-0.5 text-[9px] bg-black/60 border border-zinc-700 rounded text-[#00f0ff]">
+            ESC
+          </kbd>
         </button>
       )}
 

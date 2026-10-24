@@ -119,7 +119,7 @@ export const useResonanceStore = create<ResonanceStore>()(
       },
       isExportModalOpen: false,
       isImmersive: false,
-      autoImmersiveEnabled: true,
+      autoImmersiveEnabled: false,
       setBackgroundImageUrl: (backgroundImageUrl) => set({ backgroundImageUrl }),
       setDynamicsMode: (dynamicsMode) => set({ dynamicsMode }),
       updateShaderParam: (key, value) =>
